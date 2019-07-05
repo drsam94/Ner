@@ -18,6 +18,14 @@
         "types" : ["excalibur"]
     },
     "files" : [
-        "src/game.ts"
+        "src/game.ts",
+        "src/Battle.ts",
+        "src/Menu.ts",
+        "src/StartScreen.ts",
+        "src/Constants.ts",
+        "src/Monster.ts",
+        "src/Skills.ts",
+        "src/Type.ts",
+        "src/Resources.ts"
     ]
 }

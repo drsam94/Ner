@@ -25,7 +25,8 @@
         "variable-name": false,
         "quotemark": false,
         "no-empty": false,
-        "no-console": false
+        "no-console": false,
+        "no-reference": false
     },
     "rulesDirectory": []
 }
