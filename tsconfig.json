@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "noImplicitAny" : true,
+        "removeComments": true,
+        "strictFunctionTypes": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "noUnusedLocals": true,
+        "noImplicitReturns": true,
+        "strict": true,
+        "charset": "ASCII",
+        "diagnostics": true,
+        "extendedDiagnostics": true,
+        "pretty": true,
+        "module": "AMD",
+        "outFile": "build/game.js",
+        "target" : "es5",
+        "types" : ["excalibur"]
+    },
+    "files" : [
+        "src/game.ts"
+    ]
+}
