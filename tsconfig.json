@@ -26,6 +26,9 @@
         "src/Monster.ts",
         "src/Skills.ts",
         "src/Type.ts",
-        "src/Resources.ts"
+        "src/Resources.ts",
+        "src/SkillDefinitions.ts",
+        "src/Dialog.ts",
+        "src/CombatMath.ts"
     ]
 }

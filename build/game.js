@@ -129,6 +129,9 @@ var Type;
     Type[Type["Fire"] = 0] = "Fire";
     Type[Type["Water"] = 1] = "Water";
     Type[Type["Grass"] = 2] = "Grass";
+    Type[Type["Normal"] = 3] = "Normal";
+    Type[Type["Flying"] = 4] = "Flying";
+    Type[Type["Poison"] = 5] = "Poison";
 })(Type || (Type = {}));
 var Skill = (function () {
     function Skill(name, type, pow, acc, pp, effect) {
@@ -166,22 +169,187 @@ var Stats = (function () {
     return Stats;
 }());
 var Species = (function () {
-    function Species(name, idx, type) {
+    function Species(name, idx, types) {
         this.name = name;
         this.idx = idx;
-        this.type = type;
+        this.types = types;
     }
     return Species;
 }());
 var Monster = (function () {
-    function Monster(species, stats, skills) {
+    function Monster(species, level, stats, skills) {
         this.mods = Stats.empty();
         this.stats = stats.copy();
         this.currHP = this.stats.hp;
         this.species = species;
-        this.skills = skills;
+        this.skills = [];
+        this.level = level;
+        for (var _i = 0, skills_1 = skills; _i < skills_1.length; _i++) {
+            var skill = skills_1[_i];
+            this.skills.push(new SkillItem(skill));
+        }
     }
     return Monster;
+}());
+var noEffect = function (_1, _2, _3) { };
+var AllSkills = {};
+function defineSkill(spec) {
+    AllSkills[spec.name] = new Skill(spec.name, spec.type, spec.pow, spec.acc, spec.pp, spec.effect);
+}
+function lowerOpponentStat(statName) {
+    return function (_1, opponent, ctx) {
+        opponent.mods[statName] -= 1;
+        ctx.dialog.addText(opponent.species.name + " had its " + statName + " lowered!");
+    };
+}
+defineSkill({
+    name: "Tackle",
+    type: Type.Normal,
+    pow: 35,
+    acc: 95,
+    pp: 35,
+    effect: noEffect
+});
+defineSkill({
+    name: "Scratch",
+    type: Type.Normal,
+    pow: 40,
+    acc: 100,
+    pp: 35,
+    effect: noEffect
+});
+defineSkill({
+    name: "Growl",
+    type: Type.Normal,
+    pow: 0,
+    acc: 100,
+    pp: 40,
+    effect: lowerOpponentStat("atk")
+});
+defineSkill({
+    name: "Leer",
+    type: Type.Normal,
+    pow: 0,
+    acc: 100,
+    pp: 30,
+    effect: lowerOpponentStat("def")
+});
+var AllSpecies = {};
+function defineSpecies(name, types) {
+    var species = new Species(name, Object.keys(AllSpecies).length, types);
+    AllSpecies[name] = species;
+}
+defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
+defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
+defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
+defineSpecies("Charmander", [Type.Fire]);
+defineSpecies("Charmeleon", [Type.Fire]);
+defineSpecies("Charmeleon", [Type.Fire, Type.Flying]);
+defineSpecies("Squirtle", [Type.Water]);
+defineSpecies("Wartortle", [Type.Water]);
+defineSpecies("Blastoise", [Type.Water]);
+var Dialog = (function (_super) {
+    __extends(Dialog, _super);
+    function Dialog() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.displayText = [];
+        _this.subscribers = [];
+        _this.toReenable = [];
+        _this.textReadyToAdvance = false;
+        return _this;
+    }
+    Dialog.prototype.subscribe = function (obj) {
+        this.subscribers.push(obj);
+        if (this.displayText.length > 0) {
+            obj.isActive = false;
+        }
+    };
+    Dialog.prototype.addText = function (txt, fun) {
+        var f = fun === undefined ? function () { } : fun;
+        this.displayText.push({ text: txt, cb: f });
+        if (this.displayText.length === 1) {
+            for (var _i = 0, _a = this.subscribers; _i < _a.length; _i++) {
+                var obj = _a[_i];
+                if (obj.isActive) {
+                    this.toReenable.push(obj);
+                }
+                obj.isActive = false;
+            }
+            this.textReadyToAdvance = false;
+        }
+    };
+    Dialog.prototype.update = function (engine, delta) {
+        if (this.displayText.length === 0) {
+            return;
+        }
+        if (!this.textReadyToAdvance) {
+            this.textReadyToAdvance = true;
+            return;
+        }
+        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space)) {
+            this.advanceText();
+        }
+    };
+    Dialog.prototype.draw = function (ctx, delta) {
+        if (this.displayText.length === 0) {
+            return;
+        }
+        ctx.fillStyle = "white";
+        ctx.fillRect(this.body.pos.x, this.body.pos.y, this.width, this.height);
+        ctx.fillStyle = "black";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.font = this.height / 2 + "px Monaco";
+        ctx.fillText(this.displayText[0].text, this.body.pos.x, this.body.pos.y, this.width);
+    };
+    Dialog.prototype.advanceText = function () {
+        if (this.displayText.length === 0) {
+            return;
+        }
+        var front = this.displayText.shift();
+        if (!front) {
+            throw Error("can't happen");
+        }
+        front.cb();
+        if (this.displayText.length === 0) {
+            for (var _i = 0, _a = this.toReenable; _i < _a.length; _i++) {
+                var obj = _a[_i];
+                obj.isActive = true;
+            }
+            this.toReenable = [];
+        }
+        this.textReadyToAdvance = false;
+    };
+    return Dialog;
+}(ex.Actor));
+var CombatMath = (function () {
+    function CombatMath() {
+    }
+    CombatMath.apply = function (skill, agg, defender, ctx) {
+        if (skill.pow === 0) {
+        }
+        else {
+            var modifier = (Math.random() * 0.15) + 0.85;
+            var atk = CombatMath.getEff(agg, "atk");
+            var def = CombatMath.getEff(agg, "def");
+            var lvlComp = 2 + (2 * agg.level / 5);
+            var damage = modifier * ((lvlComp * skill.pow * atk / def) / 50 + 2);
+            defender.currHP -= Math.round(damage);
+            defender.currHP = Math.max(0, defender.currHP);
+        }
+        skill.effect(agg, defender, ctx);
+    };
+    CombatMath.getEff = function (mon, prop) {
+        var mod = mon.mods[prop];
+        var base = mon.stats[prop];
+        if (mod > 0) {
+            return ((3 + mod) / 3) * base;
+        }
+        else {
+            return (3 / (mod + base)) * base;
+        }
+    };
+    return CombatMath;
 }());
 var BattleHalf = (function () {
     function BattleHalf(team) {
@@ -192,10 +360,12 @@ var BattleHalf = (function () {
 }());
 var BattleContext = (function (_super) {
     __extends(BattleContext, _super);
-    function BattleContext(player, opp) {
+    function BattleContext(engine, player, opp) {
         var _this = _super.call(this) || this;
         _this.cachedSprites = {};
+        _this.dialog = new Dialog();
         _this.sides = [player, opp];
+        _this.engine = engine;
         return _this;
     }
     BattleContext.prototype.draw = function (ctx, delta) {
@@ -205,26 +375,83 @@ var BattleContext = (function (_super) {
             var idx = side.active.species.idx;
             sprites.push(this.getSprite(idx));
         }
-        sprites[0].draw(ctx, ScreenWidth / 3, ScreenHeight * (2 / 3));
-        sprites[1].draw(ctx, ScreenWidth * (2 / 3), ScreenHeight * (1 / 3));
+        sprites[0].draw(ctx, ScreenWidth / 6, ScreenHeight * (2 / 5));
+        sprites[1].draw(ctx, ScreenWidth * (2 / 3), ScreenHeight / 8);
+        this.drawHPBar(ctx, this.sides[0].active, new ex.Vector(ScreenWidth * (2 / 3), ScreenHeight * (2 / 5)));
+        this.drawHPBar(ctx, this.sides[1].active, new ex.Vector(ScreenWidth / 6, ScreenHeight / 8));
     };
     BattleContext.prototype.getSprite = function (idx) {
         var sprite = this.cachedSprites[idx];
         if (sprite === undefined) {
-            this.cachedSprites[idx] = Resources.frontSprite(idx);
-            return this.cachedSprites[idx];
+            sprite = Resources.frontSprite(idx);
+            this.cachedSprites[idx] = sprite;
+            sprite.scale.x *= 3;
+            sprite.scale.y *= 3;
         }
         return sprite;
+    };
+    BattleContext.prototype.drawHPBar = function (ctx, mon, barPos) {
+        ctx.fillStyle = "white";
+        var barX = barPos.x;
+        var barY = barPos.y;
+        var barWidth = ScreenWidth * (1 / 6);
+        var barHeight = ScreenHeight * (1 / 24);
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        var healthPct = mon.currHP / mon.stats.hp;
+        if (healthPct > 0.5) {
+            ctx.fillStyle = "green";
+        }
+        else if (healthPct > 0.25) {
+            ctx.fillStyle = "yellow";
+        }
+        else {
+            ctx.fillStyle = "red";
+        }
+        ctx.fillRect(barX, barY, barWidth * healthPct, barHeight);
+        ctx.fillStyle = "white";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.font = barHeight + "px Monaco";
+        ctx.fillText(mon.currHP + " / " + mon.stats.hp, barX, barY + barHeight);
+    };
+    BattleContext.prototype.doAttack = function (skill, user) {
+        var _this = this;
+        var agg = this.sides[0].active;
+        var def = this.sides[1].active;
+        if (user === def) {
+            def = agg;
+            agg = user;
+        }
+        this.dialog.addText(agg.species.name + " used " + skill.skill.name + "!", function () {
+            CombatMath.apply(skill.skill, agg, def, _this);
+            skill.currPP -= 1;
+            if (def === _this.sides[1].active) {
+                if (def.currHP > 0) {
+                    var moveIdx = Math.floor(Math.random() * def.skills.length);
+                    _this.doAttack(def.skills[moveIdx], def);
+                }
+                else {
+                    _this.dialog.addText("You Win", function () {
+                        _this.engine.goToScene("ending");
+                    });
+                }
+            }
+            else if (def.currHP <= 0) {
+                _this.dialog.addText("You Lose", function () {
+                    _this.engine.goToScene("ending");
+                });
+            }
+        });
     };
     return BattleContext;
 }(ex.Actor));
 var FightMenu = (function (_super) {
     __extends(FightMenu, _super);
-    function FightMenu(monster) {
+    function FightMenu(ctx, monster) {
         var _this = this;
         var entries = [];
         var _loop_1 = function (skillItem) {
-            var entry = new MenuEntry(skillItem.skill.name, function () { return alert(skillItem.skill.name); }, function () { return skillItem.currPP > 0; });
+            var entry = new MenuEntry(skillItem.skill.name, function () { return ctx.doAttack(skillItem, monster); }, function () { return skillItem.currPP > 0; });
             entries.push(entry);
         };
         for (var _i = 0, _a = monster.skills; _i < _a.length; _i++) {
@@ -232,6 +459,7 @@ var FightMenu = (function (_super) {
             _loop_1(skillItem);
         }
         _this = _super.call(this, entries) || this;
+        ctx.dialog.subscribe(_this);
         return _this;
     }
     return FightMenu;
@@ -242,13 +470,14 @@ var BattleMenu = (function (_super) {
         var _this = this;
         var entries = [
             new MenuEntry("Fight", function () {
-                _this.openSub(new FightMenu(ctx.sides[0].active));
+                _this.openSub(new FightMenu(ctx, ctx.sides[0].active));
             }),
             new MenuEntry("Item", function () { }, function () { return false; }),
             new MenuEntry("Team", function () { }, function () { return false; }),
             new MenuEntry("Run", function () { alert("run"); }, function () { return true; })
         ];
         _this = _super.call(this, entries) || this;
+        ctx.dialog.subscribe(_this);
         return _this;
     }
     return BattleMenu;
@@ -259,21 +488,21 @@ var BattleScene = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     BattleScene.prototype.onInitialize = function (engine) {
-        var halfs = [];
-        for (var i = 0; i < 2; ++i) {
-            var spec = new Species("Bulbasaur", 0, Type.Grass);
-            var skill = new Skill("Tackle", Type.Grass, 50, 95, 35, function (_1, _2, _3) { });
-            var skills = [new SkillItem(skill), new SkillItem(skill), new SkillItem(skill)];
-            var stats = new Stats(10, 10, 10, 10, 10, 10);
-            var monster = new Monster(spec, stats, skills);
-            halfs.push(new BattleHalf([monster]));
-        }
-        var ctx = new BattleContext(halfs[0], halfs[1]);
+        var stats = new Stats(20, 10, 10, 10, 10, 10);
+        var playerSkills = [AllSkills.Tackle, AllSkills.Growl];
+        var playerMonster = new Monster(AllSpecies.Bulbasaur, 5, stats, playerSkills);
+        var oppSkills = [AllSkills.Scratch, AllSkills.Leer];
+        var oppMonster = new Monster(AllSpecies.Charmander, 5, stats, oppSkills);
+        var ctx = new BattleContext(engine, new BattleHalf([playerMonster]), new BattleHalf([oppMonster]));
         var menu = new BattleMenu(ctx);
         menu.body.pos.x = 0;
         menu.body.pos.y = ScreenHeight * (4 / 5);
         menu.height = ScreenHeight * (1 / 5);
         menu.width = ScreenWidth;
+        ctx.dialog.body.pos = menu.body.pos.add(new ex.Vector(0, 0));
+        ctx.dialog.height = menu.height;
+        ctx.dialog.width = menu.width;
+        this.add(ctx.dialog);
         this.add(menu);
         this.add(ctx);
     };
@@ -295,7 +524,7 @@ var Resources = (function () {
     };
     Resources.frontSprite = function (idx) {
         var rowIdx = idx % 12;
-        var colIdx = idx / 12;
+        var colIdx = Math.floor(idx / 12);
         var cellSize = 57;
         return new ex.Sprite(Resources.frontSpriteSheet, rowIdx * cellSize, colIdx * cellSize, cellSize, cellSize);
     };
@@ -308,6 +537,12 @@ function init(game) {
     game.add("startScene", startScene);
     var battleScene = new BattleScene(game);
     game.add("battle", battleScene);
+    var endingScene = new ex.Scene(game);
+    var endingText = new ex.Label("Game Over", ScreenWidth / 2, ScreenHeight / 2, "50px Arial");
+    endingText.color = ex.Color.White;
+    endingText.textAlign = ex.TextAlign.Center;
+    endingScene.add(endingText);
+    game.add("ending", endingScene);
 }
 function main() {
     var game = new ex.Engine({

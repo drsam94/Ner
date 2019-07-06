@@ -25,7 +25,7 @@ class Menu extends ex.UIActor {
     public entries : MenuEntry[];
     private selectionIdx : number = 0;
     private parentMenu? : Menu;
-    private isActive : boolean = true;
+    public isActive : boolean = true;
 
     constructor(entries : MenuEntry[], parent? : Menu) {
         super();

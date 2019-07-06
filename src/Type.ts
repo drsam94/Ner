@@ -2,5 +2,8 @@
 enum Type {
     Fire,
     Water,
-    Grass
+    Grass,
+    Normal,
+    Flying,
+    Poison
 }

@@ -29,25 +29,30 @@ class Stats {
 class Species {
     public readonly name : string;
     public readonly idx : number;
-    public readonly type : Type;
-    constructor(name : string, idx : number, type : Type) {
+    public readonly types : Type[];
+    constructor(name : string, idx : number, types : Type[]) {
         this.name = name;
         this.idx = idx;
-        this.type = type;
+        this.types = types;
     }
 }
 
 class Monster {
     public stats : Stats;
+    public level : number;
     public mods : Stats = Stats.empty();
     public currHP : number;
     public species : Species;
     public skills : SkillItem[];
     public sprite? : ex.Sprite;
-    constructor(species : Species, stats : Stats, skills : SkillItem[]) {
+    constructor(species : Species, level : number, stats : Stats, skills : Skill[]) {
         this.stats = stats.copy();
         this.currHP = this.stats.hp;
         this.species = species;
-        this.skills = skills;
+        this.skills = [];
+        this.level = level;
+        for (const skill of skills) {
+            this.skills.push(new SkillItem(skill));
+        }
     }
 }
