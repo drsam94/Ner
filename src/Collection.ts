@@ -70,7 +70,7 @@ function initCollection() {
     currentTeam.push(
         new Monster(AllSpecies.Bulbasaur, 5,
             new Stats(21, 10, 10, 10, 10, 10),
-            [AllSkills.Tackle, AllSkills.Growl]));
+            [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]));
 
     currentCollection.push(
         new Monster(AllSpecies.Squirtle, 5,

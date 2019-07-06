@@ -69,4 +69,22 @@ function initSkillDefinitions() {
         pp   : 30,
         effect : lowerOpponentStat("def")
     });
+
+    defineSkill({
+        name : "Vine Whip",
+        type : Type.Grass,
+        pow  : 35,
+        acc  : 100,
+        pp   : 10,
+        effect : noEffect
+    });
+
+    defineSkill({
+        name : "Ember",
+        type : Type.Fire,
+        pow  : 40,
+        acc  : 100,
+        pp   : 25,
+        effect : noEffect // Burn
+    });
 }

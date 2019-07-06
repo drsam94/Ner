@@ -145,7 +145,13 @@ class BattleContext extends ex.Actor {
             const result = CombatMath.apply(skill.skill, agg, def, this);
             skill.currPP -= 1;
             if (result === AttackResult.Miss) {
-                this.dialog.addText(agg.species.name + "missed!");
+                this.dialog.addText(agg.species.name + " missed!");
+            } else if (result === AttackResult.Critical) {
+                this.dialog.addText("A critical hit!");
+            } else if (result === AttackResult.SuperEffective) {
+                this.dialog.addText("It's super effective!");
+            } else if (result === AttackResult.NotVeryEffective) {
+                this.dialog.addText("It's not very effective");
             }
 
             if (def === this.sides[1].active) {
@@ -174,11 +180,14 @@ class BattleContext extends ex.Actor {
 }
 
 class FightMenu extends Menu {
-    constructor(ctx : BattleContext, monster : Monster) {
+    constructor(ctx : BattleContext, monster : Monster, parentMenu : Menu) {
         const entries : MenuEntry[] = [];
         for (const skillItem of monster.skills) {
             const entry = new MenuEntry(FightMenu.drawLabel(skillItem),
-                () => ctx.doAttack(skillItem, monster, this),
+                () => {
+                    this.close();
+                    ctx.doAttack(skillItem, monster, parentMenu);
+                },
                 () => skillItem.currPP > 0);
             entries.push(entry);
         }
@@ -188,7 +197,6 @@ class FightMenu extends Menu {
 
     private static drawLabel(skillItem : SkillItem) : DrawFun {
         return (ctx : CanvasRenderingContext2D, rect : Rect, ent : MenuEntry) => {
-
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             const textColor = ent.enabled() ? "black" : "gray";
@@ -249,7 +257,7 @@ class BattleMenu extends Menu {
     constructor(ctx : BattleContext) {
         const entries = [
             new MenuEntry("Fight", () => {
-                this.openSub(new FightMenu(ctx, ctx.sides[0].active));
+                this.openSub(new FightMenu(ctx, ctx.sides[0].active, this));
             }),
             new MenuEntry("Item", () => {}, () => false),
             new MenuEntry("Team", () => {
@@ -267,14 +275,7 @@ class BattleScene extends ex.Scene {
     private ctx? : BattleContext;
     // @override
     public onInitialize(engine : ex.Engine) {
-        // Make a manual starting state
-
-        const stats = new Stats(20, 10, 10, 10, 10, 10);
-
-        const oppSkills = [AllSkills.Scratch, AllSkills.Leer];
-        const oppMonster = new Monster(AllSpecies.Charmander, 5, stats, oppSkills);
-
-        const ctx = new BattleContext(engine, new BattleHalf(currentTeam), new BattleHalf([oppMonster]));
+        const ctx = new BattleContext(engine, new BattleHalf(currentTeam), new BattleHalf([]));
         const menu = new BattleMenu(ctx);
         menu.body.pos.x = 0;
         menu.body.pos.y = ScreenHeight * (4 / 5);
@@ -296,8 +297,8 @@ class BattleScene extends ex.Scene {
         }
         const stats = new Stats(25, 11, 11, 11, 11, 11);
 
-        const oppSkills = [AllSkills.Scratch, AllSkills.Leer];
-        const oppMonster = new Monster(AllSpecies.Charmander, 8, stats, oppSkills);
+        const oppSkills = [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember];
+        const oppMonster = new Monster(AllSpecies.Charmeleon, 8, stats, oppSkills);
         this.ctx.sides = [
             new BattleHalf(currentTeam),
             new BattleHalf([oppMonster])

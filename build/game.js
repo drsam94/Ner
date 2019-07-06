@@ -85,6 +85,10 @@ var Menu = (function (_super) {
         if (!this.isActive) {
             return;
         }
+        if (this.entries.length === 0) {
+            this.close();
+            return;
+        }
         this.updateIdx(engine);
         if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) &&
             this.entries[this.selectionIdx].enabled()) {
@@ -136,29 +140,93 @@ var ScreenWidth = 1200;
 var ScreenHeight = 800;
 var Type;
 (function (Type) {
-    Type[Type["Fire"] = 0] = "Fire";
-    Type[Type["Water"] = 1] = "Water";
-    Type[Type["Grass"] = 2] = "Grass";
-    Type[Type["Normal"] = 3] = "Normal";
-    Type[Type["Flying"] = 4] = "Flying";
-    Type[Type["Poison"] = 5] = "Poison";
+    Type[Type["Normal"] = 0] = "Normal";
+    Type[Type["Fighting"] = 1] = "Fighting";
+    Type[Type["Flying"] = 2] = "Flying";
+    Type[Type["Poison"] = 3] = "Poison";
+    Type[Type["Ground"] = 4] = "Ground";
+    Type[Type["Rock"] = 5] = "Rock";
+    Type[Type["Bug"] = 6] = "Bug";
+    Type[Type["Ghost"] = 7] = "Ghost";
+    Type[Type["Steel"] = 8] = "Steel";
+    Type[Type["Fire"] = 9] = "Fire";
+    Type[Type["Water"] = 10] = "Water";
+    Type[Type["Grass"] = 11] = "Grass";
+    Type[Type["Electric"] = 12] = "Electric";
+    Type[Type["Psychic"] = 13] = "Psychic";
+    Type[Type["Ice"] = 14] = "Ice";
+    Type[Type["Dragon"] = 15] = "Dragon";
+    Type[Type["Dark"] = 16] = "Dark";
+    Type[Type["Fairy"] = 17] = "Fairy";
 })(Type || (Type = {}));
 function typeToColor(type) {
     switch (type) {
-        case Type.Fire:
-            return "red";
-        case Type.Water:
-            return "blue";
-        case Type.Grass:
-            return "green";
         case Type.Normal:
             return "gray";
+        case Type.Fighting:
+            return "coral";
         case Type.Flying:
-            return "white";
+            return "cadetblue";
         case Type.Poison:
-            return "purple";
+            return "blueviolet";
+        case Type.Ground:
+            return "burlywood";
+        case Type.Rock:
+            return "darkkhaki";
+        case Type.Bug:
+            return "darkolivegreen";
+        case Type.Ghost:
+            return "mediumpurple";
+        case Type.Steel:
+            return "lightsteelblue";
+        case Type.Fire:
+            return "crimson";
+        case Type.Water:
+            return "deepskyblue";
+        case Type.Grass:
+            return "greenyellow";
+        case Type.Electric:
+            return "gold";
+        case Type.Psychic:
+            return "fuchsia";
+        case Type.Ice:
+            return "lightskyblue";
+        case Type.Dragon:
+            return "indigo";
+        case Type.Dark:
+            return "darkslategray";
+        case Type.Fairy:
+            return "hotpink";
     }
     return "";
+}
+var EffectivenessChart = [
+    [1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 0.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    [2.0, 1.0, 0.5, 0.5, 1.0, 2.0, 0.5, 0.0, 2.0, 1.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 2.0, 0.5],
+    [1.0, 2.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 0.5, 1.0, 1.0, 2.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0],
+    [1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.5, 0.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0],
+    [1.0, 1.0, 0.0, 2.0, 1.0, 2.0, 0.5, 1.0, 2.0, 2.0, 1.0, 0.5, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    [1.0, 0.5, 2.0, 1.0, 0.5, 1.0, 2.0, 1.0, 0.5, 2.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0],
+    [1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 2.0, 0.5],
+    [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 1.0],
+    [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.5, 1.0, 2.0, 1.0, 1.0, 2.0],
+    [1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 2.0, 0.5, 0.5, 2.0, 1.0, 1.0, 2.0, 0.5, 1.0, 1.0],
+    [1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 1.0, 1.0, 1.0, 2.0, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0],
+    [1.0, 1.0, 0.5, 0.5, 2.0, 2.0, 0.5, 1.0, 0.5, 0.5, 2.0, 0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0],
+    [1.0, 1.0, 2.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+    [1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 2.0, 1.0, 1.0, 0.5, 2.0, 1.0, 1.0],
+    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 0.0],
+    [1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 0.5],
+    [1.0, 2.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 1.0]
+];
+function typeEffectiveness(atk, mon) {
+    var eff = 1;
+    for (var _i = 0, mon_1 = mon; _i < mon_1.length; _i++) {
+        var t = mon_1[_i];
+        eff *= EffectivenessChart[atk][t];
+    }
+    return eff;
 }
 var noEffect = function (_1, _2, _3) { };
 var AllSkills = {};
@@ -211,6 +279,22 @@ function initSkillDefinitions() {
         acc: 100,
         pp: 30,
         effect: lowerOpponentStat("def")
+    });
+    defineSkill({
+        name: "Vine Whip",
+        type: Type.Grass,
+        pow: 35,
+        acc: 100,
+        pp: 10,
+        effect: noEffect
+    });
+    defineSkill({
+        name: "Ember",
+        type: Type.Fire,
+        pow: 40,
+        acc: 100,
+        pp: 25,
+        effect: noEffect
     });
 }
 var AllSpecies = {};
@@ -306,10 +390,27 @@ var Dialog = (function (_super) {
     };
     return Dialog;
 }(ex.Actor));
+var Util = (function () {
+    function Util() {
+    }
+    Util.contains = function (arr, elem) {
+        for (var _i = 0, arr_1 = arr; _i < arr_1.length; _i++) {
+            var obj = arr_1[_i];
+            if (obj === elem) {
+                return true;
+            }
+        }
+        return false;
+    };
+    return Util;
+}());
 var AttackResult;
 (function (AttackResult) {
     AttackResult[AttackResult["Hit"] = 0] = "Hit";
     AttackResult[AttackResult["Miss"] = 1] = "Miss";
+    AttackResult[AttackResult["SuperEffective"] = 2] = "SuperEffective";
+    AttackResult[AttackResult["NotVeryEffective"] = 3] = "NotVeryEffective";
+    AttackResult[AttackResult["Critical"] = 4] = "Critical";
 })(AttackResult || (AttackResult = {}));
 var CombatMath = (function () {
     function CombatMath() {
@@ -320,18 +421,32 @@ var CombatMath = (function () {
             return AttackResult.Miss;
         }
         if (skill.pow === 0) {
+            skill.effect(agg, defender, ctx);
+            return AttackResult.Hit;
+        }
+        var crit = Math.random() < (1 / 16) ? 2 : 1;
+        var effectiveness = typeEffectiveness(skill.type, defender.species.types);
+        var stab = Util.contains(agg.species.types, skill.type) ? 1.5 : 1.0;
+        var modifier = (Math.random() * 0.15) + 0.85;
+        var atk = CombatMath.getEff(agg, "atk");
+        var def = CombatMath.getEff(defender, "def");
+        var lvlComp = 2 + (2 * agg.level / 5);
+        var damage = crit * stab * effectiveness * modifier * ((lvlComp * skill.pow * atk / def) / 50 + 2);
+        defender.currHP -= Math.round(damage);
+        defender.currHP = Math.max(0, defender.currHP);
+        skill.effect(agg, defender, ctx);
+        if (crit > 1) {
+            return AttackResult.Critical;
+        }
+        else if (effectiveness > 1) {
+            return AttackResult.SuperEffective;
+        }
+        else if (effectiveness < 1) {
+            return AttackResult.NotVeryEffective;
         }
         else {
-            var modifier = (Math.random() * 0.15) + 0.85;
-            var atk = CombatMath.getEff(agg, "atk");
-            var def = CombatMath.getEff(defender, "def");
-            var lvlComp = 2 + (2 * agg.level / 5);
-            var damage = modifier * ((lvlComp * skill.pow * atk / def) / 50 + 2);
-            defender.currHP -= Math.round(damage);
-            defender.currHP = Math.max(0, defender.currHP);
+            return AttackResult.Hit;
         }
-        skill.effect(agg, defender, ctx);
-        return AttackResult.Hit;
     };
     CombatMath.getEff = function (mon, prop) {
         var mod = mon.mods[prop];
@@ -461,7 +576,16 @@ var BattleContext = (function (_super) {
             var result = CombatMath.apply(skill.skill, agg, def, _this);
             skill.currPP -= 1;
             if (result === AttackResult.Miss) {
-                _this.dialog.addText(agg.species.name + "missed!");
+                _this.dialog.addText(agg.species.name + " missed!");
+            }
+            else if (result === AttackResult.Critical) {
+                _this.dialog.addText("A critical hit!");
+            }
+            else if (result === AttackResult.SuperEffective) {
+                _this.dialog.addText("It's super effective!");
+            }
+            else if (result === AttackResult.NotVeryEffective) {
+                _this.dialog.addText("It's not very effective");
             }
             if (def === _this.sides[1].active) {
                 if (def.currHP > 0) {
@@ -493,11 +617,14 @@ var BattleContext = (function (_super) {
 }(ex.Actor));
 var FightMenu = (function (_super) {
     __extends(FightMenu, _super);
-    function FightMenu(ctx, monster) {
+    function FightMenu(ctx, monster, parentMenu) {
         var _this = this;
         var entries = [];
         var _loop_1 = function (skillItem) {
-            var entry = new MenuEntry(FightMenu.drawLabel(skillItem), function () { return ctx.doAttack(skillItem, monster, _this); }, function () { return skillItem.currPP > 0; });
+            var entry = new MenuEntry(FightMenu.drawLabel(skillItem), function () {
+                _this.close();
+                ctx.doAttack(skillItem, monster, parentMenu);
+            }, function () { return skillItem.currPP > 0; });
             entries.push(entry);
         };
         for (var _i = 0, _a = monster.skills; _i < _a.length; _i++) {
@@ -567,7 +694,7 @@ var BattleMenu = (function (_super) {
         var _this = this;
         var entries = [
             new MenuEntry("Fight", function () {
-                _this.openSub(new FightMenu(ctx, ctx.sides[0].active));
+                _this.openSub(new FightMenu(ctx, ctx.sides[0].active, _this));
             }),
             new MenuEntry("Item", function () { }, function () { return false; }),
             new MenuEntry("Team", function () {
@@ -588,10 +715,7 @@ var BattleScene = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     BattleScene.prototype.onInitialize = function (engine) {
-        var stats = new Stats(20, 10, 10, 10, 10, 10);
-        var oppSkills = [AllSkills.Scratch, AllSkills.Leer];
-        var oppMonster = new Monster(AllSpecies.Charmander, 5, stats, oppSkills);
-        var ctx = new BattleContext(engine, new BattleHalf(currentTeam), new BattleHalf([oppMonster]));
+        var ctx = new BattleContext(engine, new BattleHalf(currentTeam), new BattleHalf([]));
         var menu = new BattleMenu(ctx);
         menu.body.pos.x = 0;
         menu.body.pos.y = ScreenHeight * (4 / 5);
@@ -610,8 +734,8 @@ var BattleScene = (function (_super) {
             return;
         }
         var stats = new Stats(25, 11, 11, 11, 11, 11);
-        var oppSkills = [AllSkills.Scratch, AllSkills.Leer];
-        var oppMonster = new Monster(AllSpecies.Charmander, 8, stats, oppSkills);
+        var oppSkills = [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember];
+        var oppMonster = new Monster(AllSpecies.Charmeleon, 8, stats, oppSkills);
         this.ctx.sides = [
             new BattleHalf(currentTeam),
             new BattleHalf([oppMonster])
@@ -745,7 +869,7 @@ var CollectionScene = (function (_super) {
     return CollectionScene;
 }(ex.Scene));
 function initCollection() {
-    currentTeam.push(new Monster(AllSpecies.Bulbasaur, 5, new Stats(21, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills.Growl]));
+    currentTeam.push(new Monster(AllSpecies.Bulbasaur, 5, new Stats(21, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]));
     currentCollection.push(new Monster(AllSpecies.Squirtle, 5, new Stats(19, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills["Tail Whip"]]));
     currentCollection.push(new Monster(AllSpecies.Charmander, 5, new Stats(20, 10, 10, 10, 10, 10), [AllSkills.Scratch, AllSkills.Leer]));
 }
