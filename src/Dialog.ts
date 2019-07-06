@@ -80,4 +80,8 @@ class Dialog extends ex.Actor {
         this.textReadyToAdvance = false;
     }
 
+    public clearReenable() : void {
+        this.toReenable.length = 0;
+    }
+
 }

@@ -7,12 +7,14 @@ function defineSpecies(name : string, types : Type[]) {
     AllSpecies[name] = species;
 }
 
-defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
-defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
-defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
-defineSpecies("Charmander", [Type.Fire]);
-defineSpecies("Charmeleon", [Type.Fire]);
-defineSpecies("Charmeleon", [Type.Fire, Type.Flying]);
-defineSpecies("Squirtle", [Type.Water]);
-defineSpecies("Wartortle", [Type.Water]);
-defineSpecies("Blastoise", [Type.Water]);
+function initSpecies() {
+    defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Charmander", [Type.Fire]);
+    defineSpecies("Charmeleon", [Type.Fire]);
+    defineSpecies("Charizard", [Type.Fire, Type.Flying]);
+    defineSpecies("Squirtle", [Type.Water]);
+    defineSpecies("Wartortle", [Type.Water]);
+    defineSpecies("Blastoise", [Type.Water]);
+}

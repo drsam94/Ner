@@ -12,9 +12,30 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var Rect = (function () {
+    function Rect(x, y, w, h) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+    }
+    return Rect;
+}());
 var MenuEntry = (function () {
     function MenuEntry(lbl, fun, enabled) {
-        this.label = lbl;
+        var _this = this;
+        if (typeof lbl === "string") {
+            this.drawFun = function (ctx, rect, _) {
+                ctx.textAlign = "left";
+                ctx.textBaseline = "top";
+                ctx.fillStyle = _this.enabled() ? "black" : "gray";
+                ctx.font = rect.h + "px Monaco";
+                ctx.fillText(lbl, rect.x, rect.y, rect.w);
+            };
+        }
+        else {
+            this.drawFun = lbl;
+        }
         if (fun) {
             this.cb = fun;
         }
@@ -32,50 +53,63 @@ var MenuEntry = (function () {
 }());
 var Menu = (function (_super) {
     __extends(Menu, _super);
-    function Menu(entries, parent) {
+    function Menu(entries) {
         var _this = _super.call(this) || this;
         _this.selectionIdx = 0;
         _this.isActive = true;
+        _this.onExit = function () { };
+        _this.canBeClosed = true;
         _this.entries = entries;
-        _this.parentMenu = parent;
         return _this;
     }
     Menu.prototype.openSub = function (subMenu) {
+        var _this = this;
         this.isActive = false;
-        subMenu.parentMenu = this;
         this.scene.add(subMenu);
         subMenu.body.pos.x = this.body.pos.x;
         subMenu.body.pos.y = this.body.pos.y;
         subMenu.width = this.width;
         subMenu.height = this.height;
+        subMenu.onExit = function () {
+            _this.isActive = true;
+            _this.selectionIdx = 0;
+        };
+    };
+    Menu.prototype.close = function () {
+        if (this.onExit !== undefined) {
+            this.onExit();
+        }
+        this.kill();
     };
     Menu.prototype.update = function (engine, delta) {
         if (!this.isActive) {
             return;
         }
         this.updateIdx(engine);
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space)) {
+        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) &&
+            this.entries[this.selectionIdx].enabled()) {
             this.entries[this.selectionIdx].cb();
+            return;
         }
         if (engine.input.keyboard.wasPressed(ex.Input.Keys.Esc)) {
-            if (this.parentMenu !== undefined) {
-                this.parentMenu.isActive = true;
+            if (this.canBeClosed && this.onExit !== undefined) {
+                this.onExit();
                 this.kill();
             }
         }
     };
     Menu.prototype.updateIdx = function (engine) {
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Up)) {
-            this.selectionIdx -= 1;
-        }
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Down)) {
-            this.selectionIdx += 1;
-        }
-        this.selectionIdx += this.entries.length;
-        this.selectionIdx %= this.entries.length;
-        if (!this.entries[this.selectionIdx].enabled()) {
-            this.updateIdx(engine);
-        }
+        var initIndex = this.selectionIdx;
+        do {
+            if (engine.input.keyboard.wasPressed(ex.Input.Keys.Up)) {
+                this.selectionIdx -= 1;
+            }
+            if (engine.input.keyboard.wasPressed(ex.Input.Keys.Down)) {
+                this.selectionIdx += 1;
+            }
+            this.selectionIdx += this.entries.length;
+            this.selectionIdx %= this.entries.length;
+        } while (this.selectionIdx !== initIndex && !this.entries[this.selectionIdx].enabled());
     };
     Menu.prototype.draw = function (ctx, delta) {
         if (!this.isActive) {
@@ -86,14 +120,10 @@ var Menu = (function (_super) {
         ctx.strokeStyle = "black";
         ctx.strokeRect(this.body.pos.x, this.body.pos.y, this.width, this.height);
         var elemHeight = this.height / this.entries.length;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
         for (var i = 0; i < this.entries.length; ++i) {
             var entry = this.entries[i];
-            ctx.fillStyle = entry.enabled() ? "black" : "gray";
-            ctx.font = elemHeight + "px Monaco";
             var yCoord = this.body.pos.y + elemHeight * i;
-            ctx.fillText(entry.label, this.body.pos.x, yCoord, this.width);
+            entry.drawFun(ctx, new Rect(this.body.pos.x, yCoord, this.width, elemHeight), entry);
             if (i === this.selectionIdx) {
                 ctx.strokeStyle = "red";
                 ctx.strokeRect(this.body.pos.x, yCoord, this.width, elemHeight);
@@ -104,26 +134,6 @@ var Menu = (function (_super) {
 }(ex.UIActor));
 var ScreenWidth = 1200;
 var ScreenHeight = 800;
-var StartScreen = (function (_super) {
-    __extends(StartScreen, _super);
-    function StartScreen() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    StartScreen.prototype.onInitialize = function (engine) {
-        var menu = new Menu([
-            new MenuEntry("start", function () {
-                engine.goToScene("battle");
-            }),
-            new MenuEntry("end", function () { alert("done!"); })
-        ]);
-        menu.body.pos.x = ScreenWidth / 3;
-        menu.body.pos.y = ScreenHeight / 3;
-        menu.width = ScreenWidth / 3;
-        menu.height = ScreenHeight / 3;
-        this.add(menu);
-    };
-    return StartScreen;
-}(ex.Scene));
 var Type;
 (function (Type) {
     Type[Type["Fire"] = 0] = "Fire";
@@ -133,64 +143,23 @@ var Type;
     Type[Type["Flying"] = 4] = "Flying";
     Type[Type["Poison"] = 5] = "Poison";
 })(Type || (Type = {}));
-var Skill = (function () {
-    function Skill(name, type, pow, acc, pp, effect) {
-        this.name = name;
-        this.type = type;
-        this.pow = pow;
-        this.acc = acc;
-        this.effect = effect;
-        this.pp = pp;
+function typeToColor(type) {
+    switch (type) {
+        case Type.Fire:
+            return "red";
+        case Type.Water:
+            return "blue";
+        case Type.Grass:
+            return "green";
+        case Type.Normal:
+            return "gray";
+        case Type.Flying:
+            return "white";
+        case Type.Poison:
+            return "purple";
     }
-    return Skill;
-}());
-var SkillItem = (function () {
-    function SkillItem(skill) {
-        this.skill = skill;
-        this.currPP = skill.pp;
-    }
-    return SkillItem;
-}());
-var Stats = (function () {
-    function Stats(hp, atk, def, spd, spAtk, spDef) {
-        this.hp = hp;
-        this.atk = atk;
-        this.def = def;
-        this.spd = spd;
-        this.spAtk = spAtk;
-        this.spDef = spDef;
-    }
-    Stats.prototype.copy = function () {
-        return new Stats(this.hp, this.atk, this.def, this.spd, this.spAtk, this.spDef);
-    };
-    Stats.empty = function () {
-        return new Stats(0, 0, 0, 0, 0, 0);
-    };
-    return Stats;
-}());
-var Species = (function () {
-    function Species(name, idx, types) {
-        this.name = name;
-        this.idx = idx;
-        this.types = types;
-    }
-    return Species;
-}());
-var Monster = (function () {
-    function Monster(species, level, stats, skills) {
-        this.mods = Stats.empty();
-        this.stats = stats.copy();
-        this.currHP = this.stats.hp;
-        this.species = species;
-        this.skills = [];
-        this.level = level;
-        for (var _i = 0, skills_1 = skills; _i < skills_1.length; _i++) {
-            var skill = skills_1[_i];
-            this.skills.push(new SkillItem(skill));
-        }
-    }
-    return Monster;
-}());
+    return "";
+}
 var noEffect = function (_1, _2, _3) { };
 var AllSkills = {};
 function defineSkill(spec) {
@@ -202,52 +171,64 @@ function lowerOpponentStat(statName) {
         ctx.dialog.addText(opponent.species.name + " had its " + statName + " lowered!");
     };
 }
-defineSkill({
-    name: "Tackle",
-    type: Type.Normal,
-    pow: 35,
-    acc: 95,
-    pp: 35,
-    effect: noEffect
-});
-defineSkill({
-    name: "Scratch",
-    type: Type.Normal,
-    pow: 40,
-    acc: 100,
-    pp: 35,
-    effect: noEffect
-});
-defineSkill({
-    name: "Growl",
-    type: Type.Normal,
-    pow: 0,
-    acc: 100,
-    pp: 40,
-    effect: lowerOpponentStat("atk")
-});
-defineSkill({
-    name: "Leer",
-    type: Type.Normal,
-    pow: 0,
-    acc: 100,
-    pp: 30,
-    effect: lowerOpponentStat("def")
-});
+function initSkillDefinitions() {
+    defineSkill({
+        name: "Tackle",
+        type: Type.Normal,
+        pow: 35,
+        acc: 95,
+        pp: 35,
+        effect: noEffect
+    });
+    defineSkill({
+        name: "Scratch",
+        type: Type.Normal,
+        pow: 40,
+        acc: 100,
+        pp: 35,
+        effect: noEffect
+    });
+    defineSkill({
+        name: "Growl",
+        type: Type.Normal,
+        pow: 0,
+        acc: 100,
+        pp: 40,
+        effect: lowerOpponentStat("atk")
+    });
+    defineSkill({
+        name: "Leer",
+        type: Type.Normal,
+        pow: 0,
+        acc: 100,
+        pp: 30,
+        effect: lowerOpponentStat("def")
+    });
+    defineSkill({
+        name: "Tail Whip",
+        type: Type.Normal,
+        pow: 0,
+        acc: 100,
+        pp: 30,
+        effect: lowerOpponentStat("def")
+    });
+}
 var AllSpecies = {};
 function defineSpecies(name, types) {
     var species = new Species(name, Object.keys(AllSpecies).length, types);
     AllSpecies[name] = species;
 }
-defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
-defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
-defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
-defineSpecies("Charmander", [Type.Fire]);
-defineSpecies("Charmeleon", [Type.Fire]);
-defineSpecies("Charmeleon", [Type.Fire, Type.Flying]);
-defineSpecies("Squirtle", [Type.Water]);
-defineSpecies("Wartortle", [Type.Water]);
-defineSpecies("Blastoise", [Type.Water]);
+function initSpecies() {
+    defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
+    defineSpecies("Charmander", [Type.Fire]);
+    defineSpecies("Charmeleon", [Type.Fire]);
+    defineSpecies("Charizard", [Type.Fire, Type.Flying]);
+    defineSpecies("Squirtle", [Type.Water]);
+    defineSpecies("Wartortle", [Type.Water]);
+    defineSpecies("Blastoise", [Type.Water]);
+}
 var Dialog = (function (_super) {
     __extends(Dialog, _super);
     function Dialog() {
@@ -320,24 +301,37 @@ var Dialog = (function (_super) {
         }
         this.textReadyToAdvance = false;
     };
+    Dialog.prototype.clearReenable = function () {
+        this.toReenable.length = 0;
+    };
     return Dialog;
 }(ex.Actor));
+var AttackResult;
+(function (AttackResult) {
+    AttackResult[AttackResult["Hit"] = 0] = "Hit";
+    AttackResult[AttackResult["Miss"] = 1] = "Miss";
+})(AttackResult || (AttackResult = {}));
 var CombatMath = (function () {
     function CombatMath() {
     }
     CombatMath.apply = function (skill, agg, defender, ctx) {
+        var accRoll = Math.random() * 100;
+        if (accRoll > skill.acc) {
+            return AttackResult.Miss;
+        }
         if (skill.pow === 0) {
         }
         else {
             var modifier = (Math.random() * 0.15) + 0.85;
             var atk = CombatMath.getEff(agg, "atk");
-            var def = CombatMath.getEff(agg, "def");
+            var def = CombatMath.getEff(defender, "def");
             var lvlComp = 2 + (2 * agg.level / 5);
             var damage = modifier * ((lvlComp * skill.pow * atk / def) / 50 + 2);
             defender.currHP -= Math.round(damage);
             defender.currHP = Math.max(0, defender.currHP);
         }
         skill.effect(agg, defender, ctx);
+        return AttackResult.Hit;
     };
     CombatMath.getEff = function (mon, prop) {
         var mod = mon.mods[prop];
@@ -346,7 +340,7 @@ var CombatMath = (function () {
             return ((3 + mod) / 3) * base;
         }
         else {
-            return (3 / (mod + base)) * base;
+            return (3 / (3 - mod)) * base;
         }
     };
     return CombatMath;
@@ -356,6 +350,16 @@ var BattleHalf = (function () {
         this.team = team;
         this.active = team[0];
     }
+    BattleHalf.prototype.liveCount = function () {
+        var ret = 0;
+        for (var _i = 0, _a = this.team; _i < _a.length; _i++) {
+            var mon = _a[_i];
+            if (mon.currHP > 0) {
+                ++ret;
+            }
+        }
+        return ret;
+    };
     return BattleHalf;
 }());
 var BattleContext = (function (_super) {
@@ -377,8 +381,13 @@ var BattleContext = (function (_super) {
         }
         sprites[0].draw(ctx, ScreenWidth / 6, ScreenHeight * (2 / 5));
         sprites[1].draw(ctx, ScreenWidth * (2 / 3), ScreenHeight / 8);
-        this.drawHPBar(ctx, this.sides[0].active, new ex.Vector(ScreenWidth * (2 / 3), ScreenHeight * (2 / 5)));
-        this.drawHPBar(ctx, this.sides[1].active, new ex.Vector(ScreenWidth / 6, ScreenHeight / 8));
+        var rect = new Rect(ScreenWidth * (2 / 3), ScreenHeight * (1 / 2), ScreenWidth * (1 / 6), ScreenHeight * (1 / 24));
+        this.drawHPBar(ctx, this.sides[0].active, rect);
+        this.drawBalls(ctx, this.sides[0].team, rect);
+        rect.x = ScreenWidth / 6;
+        rect.y = ScreenHeight / 8;
+        this.drawHPBar(ctx, this.sides[1].active, rect);
+        this.drawBalls(ctx, this.sides[1].team, rect);
     };
     BattleContext.prototype.getSprite = function (idx) {
         var sprite = this.cachedSprites[idx];
@@ -394,8 +403,8 @@ var BattleContext = (function (_super) {
         ctx.fillStyle = "white";
         var barX = barPos.x;
         var barY = barPos.y;
-        var barWidth = ScreenWidth * (1 / 6);
-        var barHeight = ScreenHeight * (1 / 24);
+        var barWidth = barPos.w;
+        var barHeight = barPos.h;
         ctx.fillRect(barX, barY, barWidth, barHeight);
         var healthPct = mon.currHP / mon.stats.hp;
         if (healthPct > 0.5) {
@@ -414,7 +423,33 @@ var BattleContext = (function (_super) {
         ctx.font = barHeight + "px Monaco";
         ctx.fillText(mon.currHP + " / " + mon.stats.hp, barX, barY + barHeight);
     };
-    BattleContext.prototype.doAttack = function (skill, user) {
+    BattleContext.prototype.drawBalls = function (ctx, team, rect) {
+        var ballX = rect.x;
+        var ballRadius = (rect.w / 6 - 3) / 2;
+        for (var i = 0; i < 6; ++i) {
+            ctx.beginPath();
+            ctx.arc(ballX + ballRadius, rect.y - ballRadius, ballRadius, 0, 2 * Math.PI);
+            ctx.strokeStyle = "white";
+            ctx.stroke();
+            if (i >= team.length) {
+            }
+            else if (team[i].currHP === 0) {
+                ctx.fillStyle = "red";
+                ctx.fill();
+            }
+            else {
+                ctx.fillStyle = "green";
+                ctx.fill();
+            }
+            ballX += rect.w / 6;
+        }
+    };
+    BattleContext.prototype.enemyTurn = function (menu) {
+        var enemy = this.sides[1].active;
+        var moveIdx = Math.floor(Math.random() * enemy.skills.length);
+        this.doAttack(enemy.skills[moveIdx], enemy, menu);
+    };
+    BattleContext.prototype.doAttack = function (skill, user, menu) {
         var _this = this;
         var agg = this.sides[0].active;
         var def = this.sides[1].active;
@@ -423,12 +458,14 @@ var BattleContext = (function (_super) {
             agg = user;
         }
         this.dialog.addText(agg.species.name + " used " + skill.skill.name + "!", function () {
-            CombatMath.apply(skill.skill, agg, def, _this);
+            var result = CombatMath.apply(skill.skill, agg, def, _this);
             skill.currPP -= 1;
+            if (result === AttackResult.Miss) {
+                _this.dialog.addText(agg.species.name + "missed!");
+            }
             if (def === _this.sides[1].active) {
                 if (def.currHP > 0) {
-                    var moveIdx = Math.floor(Math.random() * def.skills.length);
-                    _this.doAttack(def.skills[moveIdx], def);
+                    _this.enemyTurn(menu);
                 }
                 else {
                     _this.dialog.addText("You Win", function () {
@@ -437,9 +474,18 @@ var BattleContext = (function (_super) {
                 }
             }
             else if (def.currHP <= 0) {
-                _this.dialog.addText("You Lose", function () {
-                    _this.engine.goToScene("ending");
-                });
+                if (_this.sides[0].liveCount() === 0) {
+                    _this.dialog.addText("You Lose", function () {
+                        _this.engine.goToScene("ending");
+                    });
+                }
+                else {
+                    _this.dialog.addText(def.species.name + " fainted", function () {
+                        _this.dialog.clearReenable();
+                        var smenu = new SwapMenu(_this);
+                        menu.openSub(smenu);
+                    });
+                }
             }
         });
     };
@@ -451,7 +497,7 @@ var FightMenu = (function (_super) {
         var _this = this;
         var entries = [];
         var _loop_1 = function (skillItem) {
-            var entry = new MenuEntry(skillItem.skill.name, function () { return ctx.doAttack(skillItem, monster); }, function () { return skillItem.currPP > 0; });
+            var entry = new MenuEntry(FightMenu.drawLabel(skillItem), function () { return ctx.doAttack(skillItem, monster, _this); }, function () { return skillItem.currPP > 0; });
             entries.push(entry);
         };
         for (var _i = 0, _a = monster.skills; _i < _a.length; _i++) {
@@ -462,7 +508,58 @@ var FightMenu = (function (_super) {
         ctx.dialog.subscribe(_this);
         return _this;
     }
+    FightMenu.drawLabel = function (skillItem) {
+        return function (ctx, rect, ent) {
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            var textColor = ent.enabled() ? "black" : "gray";
+            ctx.fillStyle = textColor;
+            ctx.font = rect.h + "px Monaco";
+            var nameWidth = ctx.measureText(skillItem.skill.name).width;
+            ctx.fillText(skillItem.skill.name, rect.x, rect.y, rect.w);
+            rect.x += nameWidth + 10;
+            rect.w -= nameWidth + 10;
+            var type = skillItem.skill.type;
+            var typeWidth = ctx.measureText(Type[type]).width;
+            ctx.fillStyle = typeToColor(type);
+            ctx.fillRect(rect.x, rect.y, typeWidth, rect.h);
+            ctx.fillStyle = textColor;
+            ctx.fillText(Type[type], rect.x, rect.y, rect.w);
+            rect.x += typeWidth;
+            rect.w -= typeWidth;
+            ctx.textAlign = "right";
+            var ppText = skillItem.currPP + " / " + skillItem.skill.pp;
+            ctx.fillText(ppText, rect.x + rect.w, rect.y, rect.w);
+        };
+    };
     return FightMenu;
+}(Menu));
+var SwapMenu = (function (_super) {
+    __extends(SwapMenu, _super);
+    function SwapMenu(ctx, menu) {
+        var _this = _super.call(this, []) || this;
+        var half = ctx.sides[0];
+        var _loop_2 = function (mon) {
+            this_1.entries.push(new MenuEntry(mon.species.name, function () {
+                ctx.dialog.addText("Player sent out " + mon.species.name, function () {
+                    half.active = mon;
+                    _this.close();
+                    if (menu) {
+                        ctx.enemyTurn(menu);
+                    }
+                });
+            }, function () { return mon !== half.active && mon.currHP > 0; }));
+        };
+        var this_1 = this;
+        for (var _i = 0, _a = half.team; _i < _a.length; _i++) {
+            var mon = _a[_i];
+            _loop_2(mon);
+        }
+        ctx.dialog.subscribe(_this);
+        _this.canBeClosed = menu !== undefined;
+        return _this;
+    }
+    return SwapMenu;
 }(Menu));
 var BattleMenu = (function (_super) {
     __extends(BattleMenu, _super);
@@ -473,11 +570,14 @@ var BattleMenu = (function (_super) {
                 _this.openSub(new FightMenu(ctx, ctx.sides[0].active));
             }),
             new MenuEntry("Item", function () { }, function () { return false; }),
-            new MenuEntry("Team", function () { }, function () { return false; }),
+            new MenuEntry("Team", function () {
+                _this.openSub(new SwapMenu(ctx, _this));
+            }, function () { return ctx.sides[0].liveCount() > 1; }),
             new MenuEntry("Run", function () { alert("run"); }, function () { return true; })
         ];
         _this = _super.call(this, entries) || this;
         ctx.dialog.subscribe(_this);
+        _this.canBeClosed = false;
         return _this;
     }
     return BattleMenu;
@@ -489,11 +589,9 @@ var BattleScene = (function (_super) {
     }
     BattleScene.prototype.onInitialize = function (engine) {
         var stats = new Stats(20, 10, 10, 10, 10, 10);
-        var playerSkills = [AllSkills.Tackle, AllSkills.Growl];
-        var playerMonster = new Monster(AllSpecies.Bulbasaur, 5, stats, playerSkills);
         var oppSkills = [AllSkills.Scratch, AllSkills.Leer];
         var oppMonster = new Monster(AllSpecies.Charmander, 5, stats, oppSkills);
-        var ctx = new BattleContext(engine, new BattleHalf([playerMonster]), new BattleHalf([oppMonster]));
+        var ctx = new BattleContext(engine, new BattleHalf(currentTeam), new BattleHalf([oppMonster]));
         var menu = new BattleMenu(ctx);
         menu.body.pos.x = 0;
         menu.body.pos.y = ScreenHeight * (4 / 5);
@@ -505,10 +603,173 @@ var BattleScene = (function (_super) {
         this.add(ctx.dialog);
         this.add(menu);
         this.add(ctx);
+        this.ctx = ctx;
     };
-    BattleScene.prototype.onActive = function () { };
+    BattleScene.prototype.onActivate = function () {
+        if (!this.ctx) {
+            return;
+        }
+        var stats = new Stats(25, 11, 11, 11, 11, 11);
+        var oppSkills = [AllSkills.Scratch, AllSkills.Leer];
+        var oppMonster = new Monster(AllSpecies.Charmander, 8, stats, oppSkills);
+        this.ctx.sides = [
+            new BattleHalf(currentTeam),
+            new BattleHalf([oppMonster])
+        ];
+    };
     BattleScene.prototype.onDeactivate = function () { };
     return BattleScene;
+}(ex.Scene));
+var Skill = (function () {
+    function Skill(name, type, pow, acc, pp, effect) {
+        this.name = name;
+        this.type = type;
+        this.pow = pow;
+        this.acc = acc;
+        this.effect = effect;
+        this.pp = pp;
+    }
+    return Skill;
+}());
+var SkillItem = (function () {
+    function SkillItem(skill) {
+        this.skill = skill;
+        this.currPP = skill.pp;
+    }
+    return SkillItem;
+}());
+var Stats = (function () {
+    function Stats(hp, atk, def, spd, spAtk, spDef) {
+        this.hp = hp;
+        this.atk = atk;
+        this.def = def;
+        this.spd = spd;
+        this.spAtk = spAtk;
+        this.spDef = spDef;
+    }
+    Stats.prototype.copy = function () {
+        return new Stats(this.hp, this.atk, this.def, this.spd, this.spAtk, this.spDef);
+    };
+    Stats.empty = function () {
+        return new Stats(0, 0, 0, 0, 0, 0);
+    };
+    return Stats;
+}());
+var Species = (function () {
+    function Species(name, idx, types) {
+        this.name = name;
+        this.idx = idx;
+        this.types = types;
+    }
+    return Species;
+}());
+var Monster = (function () {
+    function Monster(species, level, stats, skills) {
+        this.mods = Stats.empty();
+        this.stats = stats.copy();
+        this.currHP = this.stats.hp;
+        this.species = species;
+        this.skills = [];
+        this.level = level;
+        for (var _i = 0, skills_1 = skills; _i < skills_1.length; _i++) {
+            var skill = skills_1[_i];
+            this.skills.push(new SkillItem(skill));
+        }
+    }
+    return Monster;
+}());
+var currentCollection = [];
+var currentTeam = [];
+var MonsterMenu = (function (_super) {
+    __extends(MonsterMenu, _super);
+    function MonsterMenu(src, dst) {
+        var _this = _super.call(this, []) || this;
+        _this.src = src;
+        _this.dst = dst;
+        _this.populate();
+        return _this;
+    }
+    MonsterMenu.prototype.populate = function () {
+        var _this = this;
+        this.entries.length = 0;
+        var _loop_3 = function (i) {
+            var j = i;
+            var mon = this_2.src[j];
+            this_2.entries.push(new MenuEntry(mon.species.name, function () {
+                _this.dst.push(mon);
+                _this.src.splice(j, j + 1);
+                _this.populate();
+            }, function () { return _this.dst === currentTeam ? currentTeam.length < 6 : currentTeam.length > 1; }));
+        };
+        var this_2 = this;
+        for (var i = 0; i < this.src.length; ++i) {
+            _loop_3(i);
+        }
+        this.selectionIdx = 0;
+    };
+    return MonsterMenu;
+}(Menu));
+var CollectionMenu = (function (_super) {
+    __extends(CollectionMenu, _super);
+    function CollectionMenu(engine) {
+        var _this = this;
+        var entries = [
+            new MenuEntry("Withdraw", function () {
+                _this.openSub(new MonsterMenu(currentCollection, currentTeam));
+            }, function () { return currentTeam.length < 6; }),
+            new MenuEntry("Deposit", function () {
+                _this.openSub(new MonsterMenu(currentTeam, currentCollection));
+            }, function () { return currentTeam.length > 1; })
+        ];
+        _this = _super.call(this, entries) || this;
+        _this.onExit = function () {
+            engine.goToScene("mainMenu");
+        };
+        return _this;
+    }
+    return CollectionMenu;
+}(Menu));
+var CollectionScene = (function (_super) {
+    __extends(CollectionScene, _super);
+    function CollectionScene() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    CollectionScene.prototype.onInitialize = function (engine) {
+        var menu = new CollectionMenu(engine);
+        menu.body.pos.x = 0;
+        menu.body.pos.y = ScreenHeight * (4 / 5);
+        menu.height = ScreenHeight * (1 / 5);
+        menu.width = ScreenWidth;
+        this.add(menu);
+    };
+    return CollectionScene;
+}(ex.Scene));
+function initCollection() {
+    currentTeam.push(new Monster(AllSpecies.Bulbasaur, 5, new Stats(21, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills.Growl]));
+    currentCollection.push(new Monster(AllSpecies.Squirtle, 5, new Stats(19, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills["Tail Whip"]]));
+    currentCollection.push(new Monster(AllSpecies.Charmander, 5, new Stats(20, 10, 10, 10, 10, 10), [AllSkills.Scratch, AllSkills.Leer]));
+}
+var StartScreen = (function (_super) {
+    __extends(StartScreen, _super);
+    function StartScreen() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    StartScreen.prototype.onInitialize = function (engine) {
+        var menu = new Menu([
+            new MenuEntry("battle", function () {
+                engine.goToScene("battle");
+            }),
+            new MenuEntry("collection", function () {
+                engine.goToScene("collection");
+            })
+        ]);
+        menu.body.pos.x = ScreenWidth / 3;
+        menu.body.pos.y = ScreenHeight / 3;
+        menu.width = ScreenWidth / 3;
+        menu.height = ScreenHeight / 3;
+        this.add(menu);
+    };
+    return StartScreen;
 }(ex.Scene));
 var Resources = (function () {
     function Resources() {
@@ -534,7 +795,7 @@ var Resources = (function () {
 }());
 function init(game) {
     var startScene = new StartScreen(game);
-    game.add("startScene", startScene);
+    game.add("mainMenu", startScene);
     var battleScene = new BattleScene(game);
     game.add("battle", battleScene);
     var endingScene = new ex.Scene(game);
@@ -543,8 +804,12 @@ function init(game) {
     endingText.textAlign = ex.TextAlign.Center;
     endingScene.add(endingText);
     game.add("ending", endingScene);
+    game.add("collection", new CollectionScene(game));
 }
 function main() {
+    initSkillDefinitions();
+    initSpecies();
+    initCollection();
     var game = new ex.Engine({
         width: ScreenWidth,
         height: ScreenHeight,
@@ -552,6 +817,6 @@ function main() {
     });
     init(game);
     game.backgroundColor = new ex.Color(0, 0, 0);
-    game.start(Resources.getLoader()).then(function () { return game.goToScene("startScene"); });
+    game.start(Resources.getLoader()).then(function () { return game.goToScene("mainMenu"); });
 }
 document.body.onload = main;

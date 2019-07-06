@@ -24,11 +24,13 @@
         "src/StartScreen.ts",
         "src/Constants.ts",
         "src/Monster.ts",
-        "src/Skills.ts",
         "src/Type.ts",
         "src/Resources.ts",
         "src/SkillDefinitions.ts",
         "src/Dialog.ts",
-        "src/CombatMath.ts"
+        "src/CombatMath.ts",
+        "src/Collection.ts",
+        "src/Skills.ts",
+        "src/Rect.ts"
     ]
 }

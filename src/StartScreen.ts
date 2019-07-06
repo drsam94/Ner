@@ -1,14 +1,18 @@
 /// <reference path="../node_modules/excalibur/dist/excalibur.d.ts" />
 /// <reference path="./Menu.ts" />
 /// <reference path="./Constants.ts" />
+/// <reference path="./Collection.ts" />
+
 class StartScreen extends ex.Scene {
     public onInitialize(engine : ex.Engine) : void {
         const menu = new Menu(
             [
-                new MenuEntry("start", () => {
+                new MenuEntry("battle", () => {
                     engine.goToScene("battle");
                 }),
-                new MenuEntry("end", () => { alert("done!"); })
+                new MenuEntry("collection", () => {
+                    engine.goToScene("collection");
+                })
             ]
         );
         menu.body.pos.x = ScreenWidth / 3;

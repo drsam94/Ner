@@ -3,10 +3,11 @@
 /// <reference path="./Battle.ts" />
 /// <reference path="./Constants.ts" />
 /// <reference path="./Resources.ts" />
+/// <reference path="./Collection.ts" />
 
 function init(game : ex.Engine) : void {
     const startScene = new StartScreen(game);
-    game.add("startScene", startScene);
+    game.add("mainMenu", startScene);
     const battleScene = new BattleScene(game);
     game.add("battle", battleScene);
 
@@ -16,9 +17,13 @@ function init(game : ex.Engine) : void {
     endingText.textAlign = ex.TextAlign.Center;
     endingScene.add(endingText);
     game.add("ending", endingScene);
+    game.add("collection", new CollectionScene(game));
 }
 
 function main() : void {
+    initSkillDefinitions();
+    initSpecies();
+    initCollection();
     const game = new ex.Engine({
         width: ScreenWidth,
         height: ScreenHeight,
@@ -29,7 +34,7 @@ function main() : void {
 
     // Start the engine to begin the game.
     game.backgroundColor = new ex.Color(0, 0, 0);
-    game.start(Resources.getLoader()).then(() => game.goToScene("startScene"));
+    game.start(Resources.getLoader()).then(() => game.goToScene("mainMenu"));
 }
 
 document.body.onload = main;

@@ -1,4 +1,5 @@
 /// <reference path="./Skills.ts" />
+/// <reference path="./Type.ts" />
 
 const noEffect : Effect = (_1, _2, _3) => {};
 interface SkillSpec {
@@ -23,38 +24,49 @@ function lowerOpponentStat(statName : string) : Effect {
     };
 }
 
-defineSkill({
-    name : "Tackle",
-    type : Type.Normal,
-    pow  : 35,
-    acc  : 95,
-    pp   : 35,
-    effect : noEffect
-});
+function initSkillDefinitions() {
+    defineSkill({
+        name : "Tackle",
+        type : Type.Normal,
+        pow  : 35,
+        acc  : 95,
+        pp   : 35,
+        effect : noEffect
+    });
 
-defineSkill({
-    name : "Scratch",
-    type : Type.Normal,
-    pow  : 40,
-    acc  : 100,
-    pp   : 35,
-    effect : noEffect
-});
+    defineSkill({
+        name : "Scratch",
+        type : Type.Normal,
+        pow  : 40,
+        acc  : 100,
+        pp   : 35,
+        effect : noEffect
+    });
 
-defineSkill({
-    name : "Growl",
-    type : Type.Normal,
-    pow  : 0,
-    acc  : 100,
-    pp   : 40,
-    effect : lowerOpponentStat("atk")
-});
+    defineSkill({
+        name : "Growl",
+        type : Type.Normal,
+        pow  : 0,
+        acc  : 100,
+        pp   : 40,
+        effect : lowerOpponentStat("atk")
+    });
 
-defineSkill({
-    name : "Leer",
-    type : Type.Normal,
-    pow  : 0,
-    acc  : 100,
-    pp   : 30,
-    effect : lowerOpponentStat("def")
-});
+    defineSkill({
+        name : "Leer",
+        type : Type.Normal,
+        pow  : 0,
+        acc  : 100,
+        pp   : 30,
+        effect : lowerOpponentStat("def")
+    });
+
+    defineSkill({
+        name : "Tail Whip",
+        type : Type.Normal,
+        pow  : 0,
+        acc  : 100,
+        pp   : 30,
+        effect : lowerOpponentStat("def")
+    });
+}
