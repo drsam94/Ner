@@ -8,7 +8,7 @@ class StartScreen extends ex.Scene {
         const menu = new Menu(
             [
                 new MenuEntry("battle", () => {
-                    engine.goToScene("battle");
+                    engine.goToScene("stageSelect");
                 }),
                 new MenuEntry("collection", () => {
                     engine.goToScene("collection");

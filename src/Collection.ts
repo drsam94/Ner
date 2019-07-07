@@ -36,7 +36,7 @@ class MonsterMenu extends Menu {
 }
 
 class CollectionMenu extends Menu {
-    constructor(engine : ex.Engine) {
+    constructor(engine : ex.Engine, parent? : boolean) {
         const entries = [
             new MenuEntry("Withdraw", () => {
                 this.openSub(new MonsterMenu(currentCollection, currentTeam));
@@ -46,9 +46,11 @@ class CollectionMenu extends Menu {
             }, () => currentTeam.length > 1)
         ];
         super(entries);
-        this.onExit = () => {
-            engine.goToScene("mainMenu");
-        };
+        if (parent === undefined) {
+            this.onExit = () => {
+                engine.goToScene("mainMenu");
+            };
+        }
     }
 }
 

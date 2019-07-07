@@ -4,6 +4,8 @@
 /// <reference path="./Constants.ts" />
 /// <reference path="./Resources.ts" />
 /// <reference path="./Collection.ts" />
+/// <reference path="./StageSelect.ts" />
+/// <reference path="./Rewards.ts" />
 
 function init(game : ex.Engine) : void {
     const startScene = new StartScreen(game);
@@ -18,6 +20,8 @@ function init(game : ex.Engine) : void {
     endingScene.add(endingText);
     game.add("ending", endingScene);
     game.add("collection", new CollectionScene(game));
+    game.add("stageSelect", new StageScene(game));
+    game.add("rewards", new RewardScene(game));
 }
 
 function main() : void {

@@ -77,7 +77,8 @@ class Menu extends ex.UIActor {
         }
         this.updateIdx(engine);
 
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) &&
+        if ((engine.input.keyboard.wasPressed(ex.Input.Keys.Space) ||
+             engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) &&
             this.entries[this.selectionIdx].enabled()) {
             this.entries[this.selectionIdx].cb();
             return;

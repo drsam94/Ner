@@ -16,6 +16,12 @@ class BattleHalf {
     constructor(team : Monster[]) {
         this.team = team;
         this.active = team[0];
+        for (const mon of team) {
+            if (mon.currHP > 0)  {
+                this.active = mon;
+                break;
+            }
+        }
     }
 
     public liveCount() : number {
@@ -159,7 +165,7 @@ class BattleContext extends ex.Actor {
                     this.enemyTurn(menu);
                 } else {
                     this.dialog.addText("You Win", () => {
-                        this.engine.goToScene("ending");
+                        this.engine.goToScene("rewards");
                     });
                 }
             } else if (def.currHP <= 0) {
@@ -272,6 +278,7 @@ class BattleMenu extends Menu {
 }
 
 class BattleScene extends ex.Scene {
+    public static opponentTeam : Monster[] = [];
     private ctx? : BattleContext;
     // @override
     public onInitialize(engine : ex.Engine) {
@@ -295,13 +302,10 @@ class BattleScene extends ex.Scene {
         if (!this.ctx) {
             return;
         }
-        const stats = new Stats(25, 11, 11, 11, 11, 11);
 
-        const oppSkills = [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember];
-        const oppMonster = new Monster(AllSpecies.Charmeleon, 8, stats, oppSkills);
         this.ctx.sides = [
             new BattleHalf(currentTeam),
-            new BattleHalf([oppMonster])
+            new BattleHalf(BattleScene.opponentTeam)
         ];
     }
 

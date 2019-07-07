@@ -32,6 +32,7 @@
         "src/Collection.ts",
         "src/Skills.ts",
         "src/Rect.ts",
-        "src/Util.ts"
+        "src/Util.ts",
+        "src/StageSelect.ts"
     ]
 }

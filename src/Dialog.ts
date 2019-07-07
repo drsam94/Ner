@@ -43,7 +43,8 @@ class Dialog extends ex.Actor {
             this.textReadyToAdvance = true;
             return;
         }
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space)) {
+        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) ||
+            engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) {
             this.advanceText();
         }
     }
@@ -83,5 +84,4 @@ class Dialog extends ex.Actor {
     public clearReenable() : void {
         this.toReenable.length = 0;
     }
-
 }

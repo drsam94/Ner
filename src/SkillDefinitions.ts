@@ -87,4 +87,13 @@ function initSkillDefinitions() {
         pp   : 25,
         effect : noEffect // Burn
     });
+
+    defineSkill({
+        name : "Water Gun",
+        type : Type.Water,
+        pow  : 40,
+        acc  : 100,
+        pp   : 25,
+        effect : noEffect
+    });
 }

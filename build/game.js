@@ -90,7 +90,8 @@ var Menu = (function (_super) {
             return;
         }
         this.updateIdx(engine);
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) &&
+        if ((engine.input.keyboard.wasPressed(ex.Input.Keys.Space) ||
+            engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) &&
             this.entries[this.selectionIdx].enabled()) {
             this.entries[this.selectionIdx].cb();
             return;
@@ -296,6 +297,14 @@ function initSkillDefinitions() {
         pp: 25,
         effect: noEffect
     });
+    defineSkill({
+        name: "Water Gun",
+        type: Type.Water,
+        pow: 40,
+        acc: 100,
+        pp: 25,
+        effect: noEffect
+    });
 }
 var AllSpecies = {};
 function defineSpecies(name, types) {
@@ -351,7 +360,8 @@ var Dialog = (function (_super) {
             this.textReadyToAdvance = true;
             return;
         }
-        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space)) {
+        if (engine.input.keyboard.wasPressed(ex.Input.Keys.Space) ||
+            engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) {
             this.advanceText();
         }
     };
@@ -464,6 +474,13 @@ var BattleHalf = (function () {
     function BattleHalf(team) {
         this.team = team;
         this.active = team[0];
+        for (var _i = 0, team_1 = team; _i < team_1.length; _i++) {
+            var mon = team_1[_i];
+            if (mon.currHP > 0) {
+                this.active = mon;
+                break;
+            }
+        }
     }
     BattleHalf.prototype.liveCount = function () {
         var ret = 0;
@@ -593,7 +610,7 @@ var BattleContext = (function (_super) {
                 }
                 else {
                     _this.dialog.addText("You Win", function () {
-                        _this.engine.goToScene("ending");
+                        _this.engine.goToScene("rewards");
                     });
                 }
             }
@@ -733,15 +750,13 @@ var BattleScene = (function (_super) {
         if (!this.ctx) {
             return;
         }
-        var stats = new Stats(25, 11, 11, 11, 11, 11);
-        var oppSkills = [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember];
-        var oppMonster = new Monster(AllSpecies.Charmeleon, 8, stats, oppSkills);
         this.ctx.sides = [
             new BattleHalf(currentTeam),
-            new BattleHalf([oppMonster])
+            new BattleHalf(BattleScene.opponentTeam)
         ];
     };
     BattleScene.prototype.onDeactivate = function () { };
+    BattleScene.opponentTeam = [];
     return BattleScene;
 }(ex.Scene));
 var Skill = (function () {
@@ -835,7 +850,7 @@ var MonsterMenu = (function (_super) {
 }(Menu));
 var CollectionMenu = (function (_super) {
     __extends(CollectionMenu, _super);
-    function CollectionMenu(engine) {
+    function CollectionMenu(engine, parent) {
         var _this = this;
         var entries = [
             new MenuEntry("Withdraw", function () {
@@ -846,9 +861,11 @@ var CollectionMenu = (function (_super) {
             }, function () { return currentTeam.length > 1; })
         ];
         _this = _super.call(this, entries) || this;
-        _this.onExit = function () {
-            engine.goToScene("mainMenu");
-        };
+        if (parent === undefined) {
+            _this.onExit = function () {
+                engine.goToScene("mainMenu");
+            };
+        }
         return _this;
     }
     return CollectionMenu;
@@ -881,7 +898,7 @@ var StartScreen = (function (_super) {
     StartScreen.prototype.onInitialize = function (engine) {
         var menu = new Menu([
             new MenuEntry("battle", function () {
-                engine.goToScene("battle");
+                engine.goToScene("stageSelect");
             }),
             new MenuEntry("collection", function () {
                 engine.goToScene("collection");
@@ -917,6 +934,98 @@ var Resources = (function () {
     Resources.frontSpriteSheet = new ex.Texture("res/PokemonGreen.png");
     return Resources;
 }());
+var Stage = (function () {
+    function Stage(name, team) {
+        this.done = false;
+        this.team = team;
+        this.name = name;
+    }
+    return Stage;
+}());
+var StageMenu = (function (_super) {
+    __extends(StageMenu, _super);
+    function StageMenu(engine, stages) {
+        var _this = _super.call(this, []) || this;
+        var _loop_4 = function (stage) {
+            this_3.entries.push(new MenuEntry(stage.name, function () {
+                BattleScene.opponentTeam = stage.team;
+                stage.done = true;
+                engine.goToScene("battle");
+            }, function () { return !stage.done; }));
+        };
+        var this_3 = this;
+        for (var _i = 0, stages_1 = stages; _i < stages_1.length; _i++) {
+            var stage = stages_1[_i];
+            _loop_4(stage);
+        }
+        return _this;
+    }
+    return StageMenu;
+}(Menu));
+var StageScene = (function (_super) {
+    __extends(StageScene, _super);
+    function StageScene() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    StageScene.prototype.onInitialize = function (engine) {
+        var stages = [
+            new Stage("Stage1", [new Monster(AllSpecies.Charmander, 5, new Stats(20, 10, 10, 10, 10, 10), [AllSkills.Scratch, AllSkills.Leer])]),
+            new Stage("Stage2", [new Monster(AllSpecies.Charmeleon, 8, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember])]),
+            new Stage("Stage3", [new Monster(AllSpecies.Ivysaur, 5, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]),
+                new Monster(AllSpecies.Wartortle, 5, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills["Tail Whip"]])])
+        ];
+        var menu = new StageMenu(engine, stages);
+        menu.body.pos.x = 0;
+        menu.body.pos.y = 0;
+        menu.height = ScreenHeight;
+        menu.width = ScreenWidth;
+        this.add(menu);
+    };
+    StageScene.prototype.onActivate = function () {
+    };
+    return StageScene;
+}(ex.Scene));
+var RewardMenu = (function (_super) {
+    __extends(RewardMenu, _super);
+    function RewardMenu(engine) {
+        var _this = _super.call(this, [
+            new MenuEntry("Collection", function () { return _this.openSub(new CollectionMenu(engine, true)); }),
+            new MenuEntry("CollectReward", function () { return _this.openSub(new MonsterMenu(_this.rewardMons, currentTeam)); })
+        ]) || this;
+        _this.onExit = function () {
+            engine.goToScene("stageSelect");
+        };
+        _this.rewardMons = [];
+        return _this;
+    }
+    RewardMenu.prototype.setRewardMon = function (mon) {
+        this.rewardMons.length = 0;
+        this.rewardMons.push(mon);
+    };
+    return RewardMenu;
+}(Menu));
+var RewardScene = (function (_super) {
+    __extends(RewardScene, _super);
+    function RewardScene() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    RewardScene.prototype.onInitialize = function (engine) {
+        this.engine = engine;
+    };
+    RewardScene.prototype.onActivate = function () {
+        if (this.engine === undefined) {
+            return;
+        }
+        var menu = new RewardMenu(this.engine);
+        menu.body.pos.x = 0;
+        menu.body.pos.y = ScreenHeight * (4 / 5);
+        menu.height = ScreenHeight * (1 / 5);
+        menu.width = ScreenWidth;
+        this.add(menu);
+        menu.setRewardMon(new Monster(AllSpecies.Blastoise, 6, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Water Gun"]]));
+    };
+    return RewardScene;
+}(ex.Scene));
 function init(game) {
     var startScene = new StartScreen(game);
     game.add("mainMenu", startScene);
@@ -929,6 +1038,8 @@ function init(game) {
     endingScene.add(endingText);
     game.add("ending", endingScene);
     game.add("collection", new CollectionScene(game));
+    game.add("stageSelect", new StageScene(game));
+    game.add("rewards", new RewardScene(game));
 }
 function main() {
     initSkillDefinitions();
