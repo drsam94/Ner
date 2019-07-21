@@ -11,18 +11,18 @@ class MonsterMenu extends Menu {
     private dst : Monster[];
 
     constructor(src : Monster[], dst : Monster[]) {
-        super([]);
+        super([], true);
         this.src = src;
         this.dst = dst;
         this.populate();
     }
 
     private populate() {
-        this.entries.length = 0;
+        const entries : MenuEntry[] = [];
         for (let i = 0; i < this.src.length; ++i) {
             const j = i;
             const mon = this.src[j];
-            this.entries.push(new MenuEntry(mon.species.name,
+            entries.push(new MenuEntry(mon.species.name,
                 () => {
                     this.dst.push(mon);
                     this.src.splice(j, j + 1);
@@ -31,7 +31,7 @@ class MonsterMenu extends Menu {
                 () => this.dst === currentTeam ? currentTeam.length < 6 : currentTeam.length > 1
             ));
         }
-        this.selectionIdx = 0;
+        this.resetEntries(entries);
     }
 }
 
@@ -45,7 +45,7 @@ class CollectionMenu extends Menu {
                 this.openSub(new MonsterMenu(currentTeam, currentCollection));
             }, () => currentTeam.length > 1)
         ];
-        super(entries);
+        super(entries, true);
         if (parent === undefined) {
             this.onExit = () => {
                 engine.goToScene("mainMenu");
@@ -71,16 +71,13 @@ class CollectionScene extends ex.Scene {
 function initCollection() {
     currentTeam.push(
         new Monster(AllSpecies.Bulbasaur, 5,
-            new Stats(21, 10, 10, 10, 10, 10),
             [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]));
 
     currentCollection.push(
         new Monster(AllSpecies.Squirtle, 5,
-            new Stats(19, 10, 10, 10, 10, 10),
             [AllSkills.Tackle, AllSkills["Tail Whip"]]));
 
     currentCollection.push(
         new Monster(AllSpecies.Charmander, 5,
-            new Stats(20, 10, 10, 10, 10, 10),
             [AllSkills.Scratch, AllSkills.Leer]));
 }

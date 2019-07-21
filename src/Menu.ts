@@ -38,11 +38,25 @@ class Menu extends ex.UIActor {
     protected selectionIdx : number = 0;
     public isActive : boolean = true;
     protected onExit? : () => void = () => {};
-    protected canBeClosed : boolean = true;
+    private canBeClosed : boolean;
 
-    constructor(entries : MenuEntry[]) {
+    constructor(entries : MenuEntry[], canBeClosed : boolean) {
         super();
+        this.canBeClosed = canBeClosed;
+        this.entries = [];
+        this.resetEntries(entries);
+    }
+
+    protected resetEntries(entries : MenuEntry[]) {
         this.entries = entries;
+        if (this.canBeClosed) {
+            this.entries.push(new MenuEntry(
+                "exit",
+                this.close,
+                () => this.canBeClosed
+            ));
+        }
+        this.selectionIdx = 0;
     }
 
     public openSub(subMenu : Menu) {

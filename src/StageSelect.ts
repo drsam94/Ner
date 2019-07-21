@@ -14,9 +14,9 @@ class Stage {
 
 class StageMenu extends Menu {
     constructor(engine : ex.Engine, stages : Stage[]) {
-        super([]);
+        const entries : MenuEntry[] = [];
         for (const stage of stages) {
-            this.entries.push(
+            entries.push(
                 new MenuEntry(
                     stage.name,
                     () => {
@@ -28,6 +28,7 @@ class StageMenu extends Menu {
                 )
             );
         }
+        super(entries, true);
     }
 }
 
@@ -36,16 +37,12 @@ class StageScene extends ex.Scene {
     public onInitialize(engine : ex.Engine) {
         const stages : Stage[] = [
             new Stage("Stage1", [new Monster(AllSpecies.Charmander, 5,
-                new Stats(20, 10, 10, 10, 10, 10),
                 [AllSkills.Scratch, AllSkills.Leer])]),
             new Stage("Stage2", [new Monster(AllSpecies.Charmeleon, 8,
-                new Stats(25, 11, 11, 11, 11, 11),
                 [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember])]),
             new Stage("Stage3", [new Monster(AllSpecies.Ivysaur, 5,
-                new Stats(25, 11, 11, 11, 11, 11),
                 [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]),
                                 new Monster(AllSpecies.Wartortle, 5,
-                new Stats(25, 11, 11, 11, 11, 11),
                 [AllSkills.Tackle, AllSkills["Tail Whip"]])])
         ];
         const menu = new StageMenu(engine, stages);

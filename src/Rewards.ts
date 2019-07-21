@@ -9,7 +9,7 @@ class RewardMenu extends Menu {
                 () => this.openSub(new CollectionMenu(engine, true))),
             new MenuEntry("CollectReward",
                 () => this.openSub(new MonsterMenu(this.rewardMons, currentTeam)))
-        ]);
+        ], true);
         this.onExit = () => {
             engine.goToScene("stageSelect");
         };
@@ -39,7 +39,6 @@ class RewardScene extends ex.Scene {
         menu.width = ScreenWidth;
         this.add(menu);
         menu.setRewardMon(new Monster(AllSpecies.Blastoise, 6,
-            new Stats(25, 11, 11, 11, 11, 11),
             [AllSkills.Tackle, AllSkills.Growl, AllSkills["Water Gun"]]));
     }
 }

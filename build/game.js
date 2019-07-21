@@ -53,15 +53,24 @@ var MenuEntry = (function () {
 }());
 var Menu = (function (_super) {
     __extends(Menu, _super);
-    function Menu(entries) {
+    function Menu(entries, canBeClosed) {
         var _this = _super.call(this) || this;
         _this.selectionIdx = 0;
         _this.isActive = true;
         _this.onExit = function () { };
-        _this.canBeClosed = true;
-        _this.entries = entries;
+        _this.canBeClosed = canBeClosed;
+        _this.entries = [];
+        _this.resetEntries(entries);
         return _this;
     }
+    Menu.prototype.resetEntries = function (entries) {
+        var _this = this;
+        this.entries = entries;
+        if (this.canBeClosed) {
+            this.entries.push(new MenuEntry("exit", this.close, function () { return _this.canBeClosed; }));
+        }
+        this.selectionIdx = 0;
+    };
     Menu.prototype.openSub = function (subMenu) {
         var _this = this;
         this.isActive = false;
@@ -307,20 +316,20 @@ function initSkillDefinitions() {
     });
 }
 var AllSpecies = {};
-function defineSpecies(name, types) {
-    var species = new Species(name, Object.keys(AllSpecies).length, types);
+function defineSpecies(name, types, baseStats) {
+    var species = new Species(name, Object.keys(AllSpecies).length, types, baseStats);
     AllSpecies[name] = species;
 }
 function initSpecies() {
-    defineSpecies("Bulbasaur", [Type.Grass, Type.Poison]);
-    defineSpecies("Ivysaur", [Type.Grass, Type.Poison]);
-    defineSpecies("Venusaur", [Type.Grass, Type.Poison]);
-    defineSpecies("Charmander", [Type.Fire]);
-    defineSpecies("Charmeleon", [Type.Fire]);
-    defineSpecies("Charizard", [Type.Fire, Type.Flying]);
-    defineSpecies("Squirtle", [Type.Water]);
-    defineSpecies("Wartortle", [Type.Water]);
-    defineSpecies("Blastoise", [Type.Water]);
+    defineSpecies("Bulbasaur", [Type.Grass, Type.Poison], new Stats(45, 49, 49, 65, 65, 45));
+    defineSpecies("Ivysaur", [Type.Grass, Type.Poison], new Stats(60, 62, 63, 80, 80, 60));
+    defineSpecies("Venusaur", [Type.Grass, Type.Poison], new Stats(80, 82, 83, 100, 100, 80));
+    defineSpecies("Charmander", [Type.Fire], new Stats(39, 52, 43, 60, 50, 65));
+    defineSpecies("Charmeleon", [Type.Fire], new Stats(58, 64, 58, 80, 65, 80));
+    defineSpecies("Charizard", [Type.Fire, Type.Flying], new Stats(78, 84, 78, 109, 85, 100));
+    defineSpecies("Squirtle", [Type.Water], new Stats(44, 48, 65, 50, 64, 43));
+    defineSpecies("Wartortle", [Type.Water], new Stats(59, 63, 80, 65, 80, 58));
+    defineSpecies("Blastoise", [Type.Water], new Stats(79, 83, 100, 85, 105, 78));
 }
 var Dialog = (function (_super) {
     __extends(Dialog, _super);
@@ -648,7 +657,7 @@ var FightMenu = (function (_super) {
             var skillItem = _a[_i];
             _loop_1(skillItem);
         }
-        _this = _super.call(this, entries) || this;
+        _this = _super.call(this, entries, true) || this;
         ctx.dialog.subscribe(_this);
         return _this;
     }
@@ -681,10 +690,11 @@ var FightMenu = (function (_super) {
 var SwapMenu = (function (_super) {
     __extends(SwapMenu, _super);
     function SwapMenu(ctx, menu) {
-        var _this = _super.call(this, []) || this;
+        var _this = this;
+        var entries = [];
         var half = ctx.sides[0];
         var _loop_2 = function (mon) {
-            this_1.entries.push(new MenuEntry(mon.species.name, function () {
+            entries.push(new MenuEntry(mon.species.name, function () {
                 ctx.dialog.addText("Player sent out " + mon.species.name, function () {
                     half.active = mon;
                     _this.close();
@@ -694,13 +704,12 @@ var SwapMenu = (function (_super) {
                 });
             }, function () { return mon !== half.active && mon.currHP > 0; }));
         };
-        var this_1 = this;
         for (var _i = 0, _a = half.team; _i < _a.length; _i++) {
             var mon = _a[_i];
             _loop_2(mon);
         }
+        _this = _super.call(this, entries, menu !== undefined) || this;
         ctx.dialog.subscribe(_this);
-        _this.canBeClosed = menu !== undefined;
         return _this;
     }
     return SwapMenu;
@@ -719,9 +728,8 @@ var BattleMenu = (function (_super) {
             }, function () { return ctx.sides[0].liveCount() > 1; }),
             new MenuEntry("Run", function () { alert("run"); }, function () { return true; })
         ];
-        _this = _super.call(this, entries) || this;
+        _this = _super.call(this, entries, false) || this;
         ctx.dialog.subscribe(_this);
-        _this.canBeClosed = false;
         return _this;
     }
     return BattleMenu;
@@ -778,7 +786,7 @@ var SkillItem = (function () {
     return SkillItem;
 }());
 var Stats = (function () {
-    function Stats(hp, atk, def, spd, spAtk, spDef) {
+    function Stats(hp, atk, def, spAtk, spDef, spd) {
         this.hp = hp;
         this.atk = atk;
         this.def = def;
@@ -792,20 +800,46 @@ var Stats = (function () {
     Stats.empty = function () {
         return new Stats(0, 0, 0, 0, 0, 0);
     };
+    Stats.prototype.record = function () {
+        return this;
+    };
+    Stats.prototype.computeStats = function (lvl, ivs, evs) {
+        var ret = Stats.empty();
+        var myStats = this.record();
+        for (var key in myStats) {
+            if (!myStats.hasOwnProperty(key)) {
+                continue;
+            }
+            var calc = (myStats[key] + ivs.record()[key]) * 2;
+            calc += Math.floor(Math.sqrt(evs.record()[key]) / 4);
+            calc = Math.floor(calc * lvl / 100);
+            if (key === "hp") {
+                calc += lvl + 10;
+            }
+            else {
+                calc += 5;
+            }
+            ret.record()[key] = calc;
+        }
+        return ret;
+    };
     return Stats;
 }());
 var Species = (function () {
-    function Species(name, idx, types) {
+    function Species(name, idx, types, stats) {
         this.name = name;
         this.idx = idx;
         this.types = types;
+        this.baseStats = stats;
     }
     return Species;
 }());
 var Monster = (function () {
-    function Monster(species, level, stats, skills) {
+    function Monster(species, level, skills, evs, ivs) {
         this.mods = Stats.empty();
-        this.stats = stats.copy();
+        evs = evs || Stats.empty();
+        ivs = ivs || Stats.empty();
+        this.stats = species.baseStats.computeStats(level, ivs, evs);
         this.currHP = this.stats.hp;
         this.species = species;
         this.skills = [];
@@ -822,7 +856,7 @@ var currentTeam = [];
 var MonsterMenu = (function (_super) {
     __extends(MonsterMenu, _super);
     function MonsterMenu(src, dst) {
-        var _this = _super.call(this, []) || this;
+        var _this = _super.call(this, [], true) || this;
         _this.src = src;
         _this.dst = dst;
         _this.populate();
@@ -830,21 +864,21 @@ var MonsterMenu = (function (_super) {
     }
     MonsterMenu.prototype.populate = function () {
         var _this = this;
-        this.entries.length = 0;
+        var entries = [];
         var _loop_3 = function (i) {
             var j = i;
-            var mon = this_2.src[j];
-            this_2.entries.push(new MenuEntry(mon.species.name, function () {
+            var mon = this_1.src[j];
+            entries.push(new MenuEntry(mon.species.name, function () {
                 _this.dst.push(mon);
                 _this.src.splice(j, j + 1);
                 _this.populate();
             }, function () { return _this.dst === currentTeam ? currentTeam.length < 6 : currentTeam.length > 1; }));
         };
-        var this_2 = this;
+        var this_1 = this;
         for (var i = 0; i < this.src.length; ++i) {
             _loop_3(i);
         }
-        this.selectionIdx = 0;
+        this.resetEntries(entries);
     };
     return MonsterMenu;
 }(Menu));
@@ -860,7 +894,7 @@ var CollectionMenu = (function (_super) {
                 _this.openSub(new MonsterMenu(currentTeam, currentCollection));
             }, function () { return currentTeam.length > 1; })
         ];
-        _this = _super.call(this, entries) || this;
+        _this = _super.call(this, entries, true) || this;
         if (parent === undefined) {
             _this.onExit = function () {
                 engine.goToScene("mainMenu");
@@ -886,9 +920,9 @@ var CollectionScene = (function (_super) {
     return CollectionScene;
 }(ex.Scene));
 function initCollection() {
-    currentTeam.push(new Monster(AllSpecies.Bulbasaur, 5, new Stats(21, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]));
-    currentCollection.push(new Monster(AllSpecies.Squirtle, 5, new Stats(19, 10, 10, 10, 10, 10), [AllSkills.Tackle, AllSkills["Tail Whip"]]));
-    currentCollection.push(new Monster(AllSpecies.Charmander, 5, new Stats(20, 10, 10, 10, 10, 10), [AllSkills.Scratch, AllSkills.Leer]));
+    currentTeam.push(new Monster(AllSpecies.Bulbasaur, 5, [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]));
+    currentCollection.push(new Monster(AllSpecies.Squirtle, 5, [AllSkills.Tackle, AllSkills["Tail Whip"]]));
+    currentCollection.push(new Monster(AllSpecies.Charmander, 5, [AllSkills.Scratch, AllSkills.Leer]));
 }
 var StartScreen = (function (_super) {
     __extends(StartScreen, _super);
@@ -903,7 +937,7 @@ var StartScreen = (function (_super) {
             new MenuEntry("collection", function () {
                 engine.goToScene("collection");
             })
-        ]);
+        ], false);
         menu.body.pos.x = ScreenWidth / 3;
         menu.body.pos.y = ScreenHeight / 3;
         menu.width = ScreenWidth / 3;
@@ -943,19 +977,20 @@ var Stage = (function () {
 var StageMenu = (function (_super) {
     __extends(StageMenu, _super);
     function StageMenu(engine, stages) {
-        var _this = _super.call(this, []) || this;
+        var _this = this;
+        var entries = [];
         var _loop_4 = function (stage) {
-            this_3.entries.push(new MenuEntry(stage.name, function () {
+            entries.push(new MenuEntry(stage.name, function () {
                 BattleScene.opponentTeam = stage.team;
                 stage.done = true;
                 engine.goToScene("battle");
             }, function () { return !stage.done; }));
         };
-        var this_3 = this;
         for (var _i = 0, stages_1 = stages; _i < stages_1.length; _i++) {
             var stage = stages_1[_i];
             _loop_4(stage);
         }
+        _this = _super.call(this, entries, true) || this;
         return _this;
     }
     return StageMenu;
@@ -967,10 +1002,10 @@ var StageScene = (function (_super) {
     }
     StageScene.prototype.onInitialize = function (engine) {
         var stages = [
-            new Stage("Stage1", [new Monster(AllSpecies.Charmander, 5, new Stats(20, 10, 10, 10, 10, 10), [AllSkills.Scratch, AllSkills.Leer])]),
-            new Stage("Stage2", [new Monster(AllSpecies.Charmeleon, 8, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember])]),
-            new Stage("Stage3", [new Monster(AllSpecies.Ivysaur, 5, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]),
-                new Monster(AllSpecies.Wartortle, 5, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills["Tail Whip"]])])
+            new Stage("Stage1", [new Monster(AllSpecies.Charmander, 5, [AllSkills.Scratch, AllSkills.Leer])]),
+            new Stage("Stage2", [new Monster(AllSpecies.Charmeleon, 8, [AllSkills.Scratch, AllSkills.Leer, AllSkills.Ember])]),
+            new Stage("Stage3", [new Monster(AllSpecies.Ivysaur, 5, [AllSkills.Tackle, AllSkills.Growl, AllSkills["Vine Whip"]]),
+                new Monster(AllSpecies.Wartortle, 5, [AllSkills.Tackle, AllSkills["Tail Whip"]])])
         ];
         var menu = new StageMenu(engine, stages);
         menu.body.pos.x = 0;
@@ -989,7 +1024,7 @@ var RewardMenu = (function (_super) {
         var _this = _super.call(this, [
             new MenuEntry("Collection", function () { return _this.openSub(new CollectionMenu(engine, true)); }),
             new MenuEntry("CollectReward", function () { return _this.openSub(new MonsterMenu(_this.rewardMons, currentTeam)); })
-        ]) || this;
+        ], true) || this;
         _this.onExit = function () {
             engine.goToScene("stageSelect");
         };
@@ -1020,7 +1055,7 @@ var RewardScene = (function (_super) {
         menu.height = ScreenHeight * (1 / 5);
         menu.width = ScreenWidth;
         this.add(menu);
-        menu.setRewardMon(new Monster(AllSpecies.Blastoise, 6, new Stats(25, 11, 11, 11, 11, 11), [AllSkills.Tackle, AllSkills.Growl, AllSkills["Water Gun"]]));
+        menu.setRewardMon(new Monster(AllSpecies.Blastoise, 6, [AllSkills.Tackle, AllSkills.Growl, AllSkills["Water Gun"]]));
     };
     return RewardScene;
 }(ex.Scene));

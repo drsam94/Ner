@@ -197,7 +197,7 @@ class FightMenu extends Menu {
                 () => skillItem.currPP > 0);
             entries.push(entry);
         }
-        super(entries);
+        super(entries, true);
         ctx.dialog.subscribe(this);
     }
 
@@ -234,10 +234,10 @@ class FightMenu extends Menu {
 
 class SwapMenu extends Menu {
     constructor(ctx : BattleContext, menu? : BattleMenu) {
-        super([]);
+        const entries : MenuEntry[] = [];
         const half : BattleHalf = ctx.sides[0];
         for (const mon of half.team) {
-            this.entries.push(new MenuEntry(
+            entries.push(new MenuEntry(
                 mon.species.name,
                 () => {
                     ctx.dialog.addText("Player sent out " + mon.species.name,
@@ -252,10 +252,10 @@ class SwapMenu extends Menu {
                 () => mon !== half.active && mon.currHP > 0
             ));
         }
-        ctx.dialog.subscribe(this);
         // If this was opened from the battle menu, we can close and go
         // back there
-        this.canBeClosed = menu !== undefined;
+        super(entries, menu !== undefined);
+        ctx.dialog.subscribe(this);
     }
 }
 
@@ -271,9 +271,8 @@ class BattleMenu extends Menu {
             }, () => ctx.sides[0].liveCount() > 1 ),
             new MenuEntry("Run", () => { alert("run"); }, () => true)
         ];
-        super(entries);
+        super(entries, false);
         ctx.dialog.subscribe(this);
-        this.canBeClosed = false;
     }
 }
 

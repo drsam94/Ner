@@ -13,7 +13,8 @@ class StartScreen extends ex.Scene {
                 new MenuEntry("collection", () => {
                     engine.goToScene("collection");
                 })
-            ]
+            ],
+            false
         );
         menu.body.pos.x = ScreenWidth / 3;
         menu.body.pos.y = ScreenHeight / 3;
