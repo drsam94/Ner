@@ -67,7 +67,7 @@ var Menu = (function (_super) {
         var _this = this;
         this.entries = entries;
         if (this.canBeClosed) {
-            this.entries.push(new MenuEntry("exit", this.close, function () { return _this.canBeClosed; }));
+            this.entries.push(new MenuEntry("exit", function () { return _this.close(); }, function () { return _this.canBeClosed; }));
         }
         this.selectionIdx = 0;
     };
@@ -88,7 +88,6 @@ var Menu = (function (_super) {
         if (this.onExit !== undefined) {
             this.onExit();
         }
-        this.kill();
     };
     Menu.prototype.update = function (engine, delta) {
         if (!this.isActive) {
@@ -108,7 +107,6 @@ var Menu = (function (_super) {
         if (engine.input.keyboard.wasPressed(ex.Input.Keys.Esc)) {
             if (this.canBeClosed && this.onExit !== undefined) {
                 this.onExit();
-                this.kill();
             }
         }
     };

@@ -1,15 +1,15 @@
 /// <reference path="../node_modules/excalibur/dist/excalibur.d.ts" />
 /// <reference path="./Rect.ts" />
 
-type DrawFun = (_1 : CanvasRenderingContext2D, _2 : Rect, _3 : MenuEntry) => void;
+type DrawFun = (_1: CanvasRenderingContext2D, _2: Rect, _3: MenuEntry) => void;
 class MenuEntry {
-    public readonly cb : () => void;
-    public readonly enabled : () => boolean;
-    public readonly drawFun : DrawFun;
+    public readonly cb: () => void;
+    public readonly enabled: () => boolean;
+    public readonly drawFun: DrawFun;
 
-    constructor(lbl : string | DrawFun, fun? : () => void, enabled? : () => boolean) {
+    constructor(lbl: string | DrawFun, fun?: () => void, enabled?: () => boolean) {
         if (typeof lbl === "string") {
-            this.drawFun = (ctx : CanvasRenderingContext2D, rect : Rect, _) => {
+            this.drawFun = (ctx: CanvasRenderingContext2D, rect: Rect, _) => {
                 ctx.textAlign = "left";
                 ctx.textBaseline = "top";
                 ctx.fillStyle = this.enabled() ? "black" : "gray";
@@ -22,7 +22,7 @@ class MenuEntry {
         if (fun) {
             this.cb = fun;
         } else {
-            this.cb = () => {};
+            this.cb = () => { };
         }
 
         if (enabled) {
@@ -34,32 +34,32 @@ class MenuEntry {
 }
 
 class Menu extends ex.UIActor {
-    protected entries : MenuEntry[];
-    protected selectionIdx : number = 0;
-    public isActive : boolean = true;
-    protected onExit? : () => void = () => {};
-    private canBeClosed : boolean;
+    protected entries: MenuEntry[];
+    protected selectionIdx: number = 0;
+    public isActive: boolean = true;
+    protected onExit?: () => void = () => { };
+    private canBeClosed: boolean;
 
-    constructor(entries : MenuEntry[], canBeClosed : boolean) {
+    constructor(entries: MenuEntry[], canBeClosed: boolean) {
         super();
         this.canBeClosed = canBeClosed;
         this.entries = [];
         this.resetEntries(entries);
     }
 
-    protected resetEntries(entries : MenuEntry[]) {
+    protected resetEntries(entries: MenuEntry[]) {
         this.entries = entries;
         if (this.canBeClosed) {
             this.entries.push(new MenuEntry(
                 "exit",
-                this.close,
+                () => this.close(),
                 () => this.canBeClosed
             ));
         }
         this.selectionIdx = 0;
     }
 
-    public openSub(subMenu : Menu) {
+    public openSub(subMenu: Menu) {
         this.isActive = false;
         this.scene.add(subMenu);
         subMenu.body.pos.x = this.body.pos.x;
@@ -73,15 +73,14 @@ class Menu extends ex.UIActor {
 
     }
 
-    public close() : void {
+    public close(): void {
         if (this.onExit !== undefined) {
             this.onExit();
         }
-        this.kill();
     }
 
     // @override
-    public update(engine : ex.Engine, delta : any) : void {
+    public update(engine: ex.Engine, delta: any): void {
         if (!this.isActive) {
             return;
         }
@@ -92,7 +91,7 @@ class Menu extends ex.UIActor {
         this.updateIdx(engine);
 
         if ((engine.input.keyboard.wasPressed(ex.Input.Keys.Space) ||
-             engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) &&
+            engine.input.keyboard.wasPressed(ex.Input.Keys.Enter)) &&
             this.entries[this.selectionIdx].enabled()) {
             this.entries[this.selectionIdx].cb();
             return;
@@ -101,12 +100,11 @@ class Menu extends ex.UIActor {
         if (engine.input.keyboard.wasPressed(ex.Input.Keys.Esc)) {
             if (this.canBeClosed && this.onExit !== undefined) {
                 this.onExit();
-                this.kill();
             }
         }
     }
 
-    private updateIdx(engine : ex.Engine) : void {
+    private updateIdx(engine: ex.Engine): void {
         const initIndex = this.selectionIdx;
         do {
             // Assumes all menus are vertical with idx 0 at the top
@@ -125,7 +123,7 @@ class Menu extends ex.UIActor {
     }
 
     // @override
-    public draw(ctx : CanvasRenderingContext2D, delta : any) {
+    public draw(ctx: CanvasRenderingContext2D, delta: any) {
         if (!this.isActive) {
             return;
         }
